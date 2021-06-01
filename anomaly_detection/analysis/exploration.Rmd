@@ -1,0 +1,15 @@
+---
+title: "exploration"
+author: "Ted Ladas - s2124289"
+date: "01/06/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+
+```
+
