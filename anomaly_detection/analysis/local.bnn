@@ -1,0 +1,31 @@
+---
+title: "testing"
+author: "Ted Ladas - s2124289"
+date: "12/06/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(keras)
+library(ggplot2)
+install.packages("tfprobability", lib="/usr/local/lib/R/site-library")
+library(tensorflow) # engine
+library(keras) # for the NN
+library(tfprobability)
+library(tidymodels) # for readability 
+library(data.table) # for speed on data frames
+library(ggplot2) # visualizations
+library(readr)
+library(skimr) # to get a fast grasp of the dataset 
+library(GGally)
+library(purrr) # for fast plotting multiple ggplots
+library(patchwork) # for allocating multiple ggplots easily
+library(corrr)
+library(corrplot)
+library(rlang) # for creating functions of ggplots
+print(0)```
+

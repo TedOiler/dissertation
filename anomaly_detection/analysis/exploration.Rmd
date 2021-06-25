@@ -4,7 +4,7 @@ author: "Ted Ladas - s2124289"
 date: "01/06/2021"
 output: html_document
 editor_options: 
-  chunk_output_type: console
+  chunk_output_type: inline
 ---
 
 ```{r setup, include=FALSE}
@@ -19,6 +19,7 @@ library(ggplot2)
 library(readr)
 library(skimr)
 library(GGally)
+library(corrr)
 # library("ggpubr")
 # library(ggcorrplot)
 # library(gridExtra)
@@ -39,6 +40,7 @@ cat(paste0(libs, ' library version: ', packageVersion(libs), '\n'))
 Load the dataset and explore the variables
 
 ```{r}
+setwd("~/Documents/code/courses/dissertation/anomaly_detection/analysis")
 wine <- as.data.table(read_csv(".././data/wine.csv"))
 wine %>% 
   count(quality)
@@ -47,6 +49,21 @@ wine %>%
 
 skim(wine)
 ```
+
+```{r}
+wine[2:12] %>% correlate() %>% network_plot(min_cor=0.6)
+```
+
+```{r}
+library(corrplot)
+numcols <- sapply(wine, is.numeric) 
+wine.corr <- wine[, ..numcols] %>% cor(use="pairwise.complete")
+wine.corr <- as.data.frame(wine.corr)
+wine.corr[ wine.corr == 1 ] <- NA
+wine.corr %>% network_plot(min_cor=0.1)
+
+```
+
 
 All variables are considered double, yet some are factors (quality, type)
 We can perform an initial EDA to find more research questions
@@ -60,12 +77,12 @@ wine <- wine %>%
   mutate(
     free.sulfur.dioxide = as.integer(free.sulfur.dioxide),
     total.sulfur.dioxide = as.integer(total.sulfur.dioxide),
-    w.type = factor(type),
-    quality_bucket = case_when(
-      quality >= 8 ~ "high",
-      quality <= 4 ~ "low",
-      TRUE ~ "medium"
-    ),
+    type = factor(type),
+    # quality_bucket = case_when(
+    #   quality >= 8 ~ "high",
+    #   quality <= 4 ~ "low",
+    #   TRUE ~ "medium"
+    # ),
     quality = factor(quality),
   )
 # # Note the best plot
@@ -78,7 +95,105 @@ wine <- wine %>%
 #          type) %>%
 #   ggpairs(mapping = aes(color=type))
 
-wine %>% ggplot(aes(x = quality, y = , color = w.type)) +
+wine %>% ggplot(aes(x = quality, y = pH, color = type)) +
   geom_point(alpha = 0.7)
+```
+
+Predict quality with a Neural Network
+
+```{r}
+# Data splits
+set.seed(1903)
+wine.split <- initial_split(wine)
+train.data <- training(wine.split)
+test.data <- testing(wine.split)
+
+X.train <- train.data %>% select(-quality) %>% as.matrix()
+X.test  <- test.data %>% select(-quality) %>% as.matrix()
+y.train <- train.data$quality 
+y.test  <- test.data$quality
+```
+
+```{r}
+# Model Definition
+
+
+
+model.NN.basic <- keras_model_sequential(list(
+  layer_input(shape = 12),
+  layer_dense(units = 9, activation = 'relu'),
+  layer_dense(units = 7, activation = 'relu'),
+  layer_dense(units = 5, activation = 'relu'),
+  layer_dense(units = 7, activation = 'softmax')
+))
+summary(model.NN.basic)
+
+model.NN.basic %>% compile(
+  optimizer = optimizer_adam(lr = 0.01),
+  loss = 'binary_crossentropy',
+  metrics = c('accuracy')
+)
+history <- model.NN.basic %>% fit(
+  validation_split = 0.2,
+  x = X.train,
+  y = y.train,
+  epochs = 500,
+  batch = 32
+)
+plot(history)
+```
+
+```{r}
+# install.packages("neuralnet")
+library(neuralnet)
+n <- neuralnet(quality~.,
+              data=wine,
+              hidden=c(12,7),
+              linear.output=FALSE,
+              lifesign='full',
+              rep=1)
+plot(n, show.weights=FALSE, information=FALSE, fill='lightblue')
+```
+
+----------------------------------------------------
+
+```{r}
+setwd("~/Documents/code/courses/dissertation/anomaly_detection/analysis")
+wine <- as.data.table(read_csv(".././data/wine.csv"))
+
+set.seed(1903)
+wine.split <- initial_split(wine)
+train.data <- training(wine.split)
+test.data <- testing(wine.split)
+
+X.train <- train.data %>% select(-quality) %>% as.matrix()
+X.test  <- test.data %>% select(-quality) %>% as.matrix()
+y.train <- train.data$quality 
+y.test  <- test.data$quality
+
+model.NN.basic <- keras_model_sequential(
+    list(
+        layer_input(shape=12),
+        layer_dense(units=9, activation='relu'),
+        layer_dense(units=6, activation='softmax')
+    )
+)
+summary(model.NN.basic)
+
+model.NN.basic %>% compile(optimizer=optimizer_adam(lr=0.01),
+                           loss='categorical_crossentropy', 
+                           metrics = c('accuracy'))
+history <- model.NN.basic %>% fit(validation_split=0.2,
+                                  x=X.train,
+                                  y=y.train,
+                                  epochs=500,
+                                  batch=32)
+plot(history)
+
+predictions <- model.NN.basic %>% predict(X.train)
+
+predictions
+
+y.train
 ```
 
