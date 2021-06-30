@@ -1,0 +1,24 @@
+\BOOKMARK [1][-]{section.1}{Introduction}{}% 1
+\BOOKMARK [2][-]{subsection.1.1}{Motivation}{section.1}% 2
+\BOOKMARK [2][-]{subsection.1.2}{Data Sources}{section.1}% 3
+\BOOKMARK [2][-]{subsection.1.3}{Software}{section.1}% 4
+\BOOKMARK [1][-]{section.2}{Exploratory Data Analysis}{}% 5
+\BOOKMARK [2][-]{subsection.2.1}{Univatiate Analysis}{section.2}% 6
+\BOOKMARK [2][-]{subsection.2.2}{Bivariate Analysis}{section.2}% 7
+\BOOKMARK [2][-]{subsection.2.3}{Dimensionality Reduction}{section.2}% 8
+\BOOKMARK [3][-]{subsubsection.2.3.1}{PCA}{subsection.2.3}% 9
+\BOOKMARK [3][-]{subsubsection.2.3.2}{t-SNE}{subsection.2.3}% 10
+\BOOKMARK [2][-]{subsection.2.4}{Multivariate Analysis}{section.2}% 11
+\BOOKMARK [1][-]{section.3}{Methods}{}% 12
+\BOOKMARK [2][-]{subsection.3.1}{Base Neural Network}{section.3}% 13
+\BOOKMARK [2][-]{subsection.3.2}{Bayesian Neural Network}{section.3}% 14
+\BOOKMARK [2][-]{subsection.3.3}{Model Validation}{section.3}% 15
+\BOOKMARK [2][-]{subsection.3.4}{Model Explanation}{section.3}% 16
+\BOOKMARK [1][-]{section.4}{Results}{}% 17
+\BOOKMARK [2][-]{subsection.4.1}{Standard Deviation}{section.4}% 18
+\BOOKMARK [2][-]{subsection.4.2}{Confidence Intervals}{section.4}% 19
+\BOOKMARK [2][-]{subsection.4.3}{Entropy}{section.4}% 20
+\BOOKMARK [1][-]{section.5}{Discussion}{}% 21
+\BOOKMARK [1][-]{section*.13}{Appendices}{}% 22
+\BOOKMARK [1][-]{appendix.A}{Appendix first topic}{}% 23
+\BOOKMARK [1][-]{appendix.B}{Appendix second topic}{}% 24
