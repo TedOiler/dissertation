@@ -12,9 +12,9 @@
 \contentsline {section}{\numberline {3}Models}{7}{section.3}%
 \contentsline {subsection}{\numberline {3.1}Base Neural Network}{8}{subsection.3.1}%
 \contentsline {subsection}{\numberline {3.2}Monte Carlo Dropout}{8}{subsection.3.2}%
-\contentsline {subsection}{\numberline {3.3}Other Bayesian Approaches}{10}{subsection.3.3}%
+\contentsline {subsection}{\numberline {3.3}Other Bayesian Approaches}{9}{subsection.3.3}%
 \contentsline {subsection}{\numberline {3.4}Model Validation}{10}{subsection.3.4}%
-\contentsline {subsection}{\numberline {3.5}Model Explanation}{12}{subsection.3.5}%
+\contentsline {subsection}{\numberline {3.5}Model Explanation}{11}{subsection.3.5}%
 \contentsline {section}{\numberline {4}Results}{12}{section.4}%
 \contentsline {subsection}{\numberline {4.1}Standard Deviation}{12}{subsection.4.1}%
 \contentsline {subsection}{\numberline {4.2}Confidence Intervals}{12}{subsection.4.2}%

@@ -309,16 +309,42 @@ In all four subplots of \autoref{fig:multi} we identify the same exact behaviour
 % ------------------------------------------------------------------------------------------------------
 \section{Models}
 \label{sec:methods}
-In this section, the methods used to create the model will be discussed. This includes, the baseline model that is deterministic in nature, as well as the various Bayesian approaches to it. Firstly, the reason to choose neural networks as the model of choice, is due to the complexity of the research question, in combination with the complexity of the dataset as demostrated from the exploration of the dataset. Secondly, the Bayesian approach is important to make the neural network prediction \textit{stochastic}. 
+In this section, the methods used to create the model will be discussed. This includes, the baseline model that is deterministic in nature, as well as the various Bayesian approaches. Firstly, the reason to choose neural networks as the model of choice, is due to the complexity of the research question, in combination with the complexity of the dataset as demostrated from the exploratory data analysis. Secondly, the Bayesian approach is important to make the neural network prediction \textit{stochastic}. 
 
-After the sucessful training of the neural network, the predictions are deterministic. That means that each time a specific input is passed through the NN, the same output is produced. While this can be useful in certain applications, the goal of this project is to find a metric for the \textit{uncertainty} of the predictions. Thit is impossible to do with a deterministic process as samples cannot be drawn from  the posterior distribution to estimate it.  Therefore, after establishing a baseline, non-bayesian NN, to prove that the problem can be solved with good enough accuracy, the network can become Bayesian by changing some of its layers to Bayesian layers.
+In order to train the model and produce both high accuracy on the training and validation sets, as well as generalize well on the test set, a series of actions had to be taken. Firstly, a set of hyperparameters had been set for all models. Those hyperparameters are:
+
+\begin{itemize}
+\item The Learning Rate - ranging from $1e-1$ to $1e-8$ 
+\item The number of layers between the Input and the Output - ranging from $2$ to $8$ 
+\item The activation function of these layers - where the choices where:
+\begin{itemize}
+\item Rectified Linear Unit (reLU): $f(x) = \max(0,x)$
+\item Exponential Linear Unit (ELU): $f(x) = \max(e^x-1,x)$
+\item Sigmoid: $f(x)=\frac{1}{1+e^{-x}}$
+\end{itemize}
+\item The number of units in each function - rangin from $32$ to $512$, with a step of $128$
+\end{itemize} 
+
+The optimization process, was a \textsf{RandomSearch} algorithm, implemented with the \textsf{KerasTuner} package. This results in slightly different results in every run, however by switching to a \textsf{GridSearch} algorithm instead, the same outcome can be ensured each time. However, this process takes more time, since it is searching the whole hyperparameter space, while the \textsf{RandomSearch} takes less time to find the best model in each run. The metric used to judge which model is best was chosen to be \textit{accuracy}, due to its simplicity and suitability at the research problem. Lastly, the loss function that the models are minimizing in order to produce the best weights, was a custom made function that calculated the sum of the categorical crossentropy between the true and the predicted labels. The true labels have a known (for the traingin set) probability distribution (PMF), and the predicted labels, also have their own probability distribution (PMF). When the sum of the categorical crossentropies is minimum, it shows that the predicted PMF and the true PMF are as close as possible. Mathematically this is expresses as: 
+
+\begin{equation}
+\text{Loss} = \sum_{i=1}^{3} y_{true}^{(i)} \log{\frac{1}{y_{pred}^{(i)}}}  = -\sum_{i=1}^{3} y_{true}^{(i)} \log y_{pred}^{(i)} 
+\end{equation}
+
+Lastly, the models are trained for $2000$ training epochs. after a certain number of epochs, started to overfit. In order to avoid this pitfall, early stopping was implemented in the model with a patience of $200$ epochs. That means that if the validation accuracy, drops for $200$ epochs, the model assumes that it overfitted and stops trying to further minimize the loss function. This is why the x-axis varies in every Figure (\autoref{fig:base}, \autoref{fig:histories}, \autoref{fig:mcdrop}) where the history of accuracy per epoch is plotted. 
+
+After the sucessful training of the base neural network, the predictions are deterministic. That means that each time a specific input is passed through the NN, the same output is produced. While this can be useful in certain applications, the goal of this project is to find a metric for the \textit{uncertainty} of the predictions. Thit is impossible to do with a deterministic process as samples cannot be drawn from  the posterior distribution to estimate it.  Therefore, after establishing a baseline, to prove that the problem can be solved with good enough accuracy, the network can become Bayesian by changing some of its layers to Bayesian layers. Afterwards, we can sample from the posterior distribution of the predictions, by predicting $n$ times the same input, in our case the test set. Then by storing each predicted probability (one for each class), in each draw ($1 \dots n$) we can compute average predictions, variances, confidence intervals, and more metrics discussed in \autoref{sec:results}. 
 
 \subsection{Base Neural Network}
 \label{sec:NN}
 
+Before tackling the Bayesian Neural Network, a deterministic baseline should be first implemented. The model is built using the \textsf{keras} package for \textsf{Python}. The architecture the produced the best results is one with two hidden layers of $416$ and $160$ neurons respectively, densely connected to one another. This produces a total number of parameters to be estimated of $75,107$. The neural network is architecture depicted in \autoref{fig:base} (a).
 
-\tikzset{every picture/.style={line width=0.75pt}} %set default line width to 0.75pt        
-
+\vspace*{1.5em}
+\begin{figure}
+\resizebox{.5\textwidth}{!}{%
+\subfloat[Base Model Neural Network Architecture]
+{\tikzset{every picture/.style={line width=0.75pt}} %set default line width to 0.75pt        
 \begin{tikzpicture}[x=0.75pt,y=0.75pt,yscale=-1,xscale=1]
 %uncomment if require: \path (0,329); %set diagram left start at 0, and has height of 329
 
@@ -358,35 +384,33 @@ Dense
 % Text Node
 \draw (115,288.4) node [anchor=north west][inner sep=0.75pt]    {$416$};
 % Text Node
-\draw (125,16) node [anchor=north west][inner sep=0.75pt]  [font=\large] [align=left] {\textbf{Base NN}};
+\draw (125,16) node [anchor=north west][inner sep=0.75pt]  [font=\large] [align=left] {\textbf{}};
 % Text Node
 \draw (304,133) node [anchor=north west][inner sep=0.75pt]   [align=left] {Output};
 % Text Node
 \draw (321,229.4) node [anchor=north west][inner sep=0.75pt]    {$3$};
-
-
-\end{tikzpicture}
-
-
-%----------
-\vspace*{1em}
-\begin{figure}[!h]
-\centering
-\includegraphics[width=\textwidth]{./output/2.a.history-base.pdf}
-\caption{}
+\end{tikzpicture}}
+}%
+\subfloat[Base model History of epochs]
+{\includegraphics[width=.5\textwidth]{./output/2.a.history-base.pdf}}
 \label{fig:base}
+\caption{Baseline Architecture and Epoch History}
 \end{figure}
-\vspace{2em}
-%----------
 
+\autoref{fig:base} (b) is a typical history of the training accuracy increasing over each epoch. Typicaly it stops before iteration $1000$ and the best accuracy of the model is close to $90\%$. This is a very good accuracy, since as we have seen at the exploratory data analysis, \textit{type 2} and \textit{type 3} are very difficult to distinguish. 
+
+With the baseline model explained and trained, we gained an understanding at the extend to which the problem can be solved with neural networks. Arguably, an accuracy score of $90\%$ does not mean anything in a vaccum. $90\%$ accuracy in predictin a cetrain desease in a patient might be too low, while the same accuracy on an application less sensitive to important decision making might be exelent. However, in the specific task at question (classifying types of wines), this could be a good final score for the model. 
 
 \subsection{Monte Carlo Dropout}
 \label{sec:BNN}
-\blindtext
 
+Adding some Monte Carlo Dropout layers in the middle of each Dense layer, is the first approach in turning the base model into a Bayesian one. Simple dropout layers work during the training of the neural network, by randomly ignoring or "dropping out" a percentage of neurons along with the backward and forwand connections. This is being handled by random draws of a Bernoulli distribution with the "success" probability defined by the user. That process, still generates a \textit{deterministic} prediction, since at test time, which neurons are online is already decided. Monte Carlo dropout, is a wrapper of the simple dropout funciton that preserves the dropout at testing time. That way, the same prediction passed through the network twice, will produce different predictions according to which neurons and connections are online. Finally, these predictions are interpreted as random draws from the posterior distribution.
 
-
-\tikzset{every picture/.style={line width=0.75pt}} %set default line width to 0.75pt        
+\vspace*{1.5em}
+\begin{figure}
+\resizebox{.5\textwidth}{!}{%
+\subfloat[Monte Carlo Dropout NN Architecture]
+{\tikzset{every picture/.style={line width=0.75pt}} %set default line width to 0.75pt        
 
 \begin{tikzpicture}[x=0.75pt,y=0.75pt,yscale=-1,xscale=1]
 %uncomment if require: \path (0,329); %set diagram left start at 0, and has height of 329
@@ -455,27 +479,19 @@ MC\\Drop
 \draw (526,226.4) node [anchor=north west][inner sep=0.75pt]    {$3$};
 % Text Node
 \draw (161,10) node [anchor=north west][inner sep=0.75pt]  [font=\large] [align=left] {\textbf{Monte Carlo Dropout BNN}};
-
-
-\end{tikzpicture}
-
-
-%----------
-\vspace*{1em}
-\begin{figure}[!h]
-\centering
-\includegraphics[width=\textwidth]{./output/2.d.history-mcdrop.pdf}
-\caption{}
+\end{tikzpicture}}
+}%
+\subfloat[Monte Carlo Dropout History of epochs]
+{\includegraphics[width=.5\textwidth]{./output/2.d.history-mcdrop.pdf}}
 \label{fig:mcdrop}
+\caption{Monte Carlo Dropout Architecture and Epoch History}
 \end{figure}
-\vspace{2em}
-%----------
+
+It is clear in \autoref{fig:mcdrop} (b) that there is a lot more variance in the prediction from epoch to epoch due to the random nature of the dropout layers. An important finding in this approach, is that the validation and the training accuracy are almost in all epochs at the same level. Contrary to the base model, where the validation accuracy increases with a slower rate than the training accuracy, this does not happen when the Monte Carlo Dropout layers are added to the model. It can even maintain for a short duration a higher validation accuracy than training accuracy, as seen from epochs $200$ to $400$ in \autoref{fig:mcdrop} (b) due to random chance.
 
 \subsection{Other Bayesian Approaches}
 \label{sec:other}
 \blindtext
-
-
 
 \tikzset{every picture/.style={line width=0.75pt}} %set default line width to 0.75pt        
 
@@ -636,11 +652,11 @@ MC\\Drop
 
 \begin{figure}[]
     \centering
-    \subfloat[Flipout Architecture]
-    {\includegraphics[width=.5\textwidth]{./output/2.c.history-flip.pdf}}
-    \subfloat[Variational Infernece Architecture]
+    \subfloat[Variational layers History of epochs]
     {\includegraphics[width=.5\textwidth]{./output/2.b.history-var.pdf}}
-    \caption{}
+    \subfloat[Flipout layers History of epochs]
+    {\includegraphics[width=.5\textwidth]{./output/2.c.history-flip.pdf}}
+    \caption{History of other Bayesian Models (Flipout and Dense Variational)}
     \label{fig:histories}
 \end{figure}
 

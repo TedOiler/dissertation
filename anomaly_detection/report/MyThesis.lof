@@ -7,11 +7,15 @@
 \contentsline {figure}{\numberline {5}{\ignorespaces centered image\relax }}{5}{figure.caption.9}%
 \contentsline {figure}{\numberline {6}{\ignorespaces centered image\relax }}{6}{figure.caption.10}%
 \contentsline {figure}{\numberline {7}{\ignorespaces \relax }}{7}{figure.caption.11}%
-\contentsline {figure}{\numberline {8}{\ignorespaces \relax }}{8}{figure.caption.12}%
-\contentsline {figure}{\numberline {9}{\ignorespaces \relax }}{9}{figure.caption.13}%
-\contentsline {figure}{\numberline {10}{\ignorespaces \relax }}{11}{figure.caption.14}%
-\contentsline {subfigure}{\numberline {(a)}{\ignorespaces {Flipout Architecture}}}{11}{subfigure.10.1}%
-\contentsline {subfigure}{\numberline {(b)}{\ignorespaces {Variational Infernece Architecture}}}{11}{subfigure.10.2}%
+\contentsline {figure}{\numberline {8}{\ignorespaces Baseline Architecture and Epoch History\relax }}{9}{figure.caption.12}%
+\contentsline {subfigure}{\numberline {(a)}{\ignorespaces {Base Model Neural Network Architecture}}}{9}{subfigure.8.1}%
+\contentsline {subfigure}{\numberline {(b)}{\ignorespaces {Base model History of epochs}}}{9}{subfigure.8.2}%
+\contentsline {figure}{\numberline {9}{\ignorespaces Monte Carlo Dropout Architecture and Epoch History\relax }}{9}{figure.caption.13}%
+\contentsline {subfigure}{\numberline {(a)}{\ignorespaces {Monte Carlo Dropout NN Architecture}}}{9}{subfigure.9.1}%
+\contentsline {subfigure}{\numberline {(b)}{\ignorespaces {Monte Carlo Dropout History of epochs}}}{9}{subfigure.9.2}%
+\contentsline {figure}{\numberline {10}{\ignorespaces History of other Bayesian Models (Flipout and Dense Variational)\relax }}{11}{figure.caption.14}%
+\contentsline {subfigure}{\numberline {(a)}{\ignorespaces {Variational layers History of epochs}}}{11}{subfigure.10.1}%
+\contentsline {subfigure}{\numberline {(b)}{\ignorespaces {Flipout layers History of epochs}}}{11}{subfigure.10.2}%
 \contentsline {figure}{\numberline {11}{\ignorespaces \relax }}{11}{figure.caption.15}%
 \contentsline {figure}{\numberline {12}{\ignorespaces \relax }}{12}{figure.caption.16}%
 \contentsline {subfigure}{\numberline {(a)}{\ignorespaces {Class 1 Explanation}}}{12}{subfigure.12.1}%
