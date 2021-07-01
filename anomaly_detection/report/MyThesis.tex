@@ -10,6 +10,8 @@
 \usepackage{blindtext}
 \usepackage{subfig}
 \usepackage{graphicx}
+\usepackage{tikz}
+\usetikzlibrary{positioning}
 
 \geometry{a4paper,left=2cm,right=2.0cm, top=2cm, bottom=2.0cm}
 
@@ -185,7 +187,7 @@ In \autoref{fig:uni}, the target variable type is represented by the orange barp
 \subsection{Bivariate Analysis}
 \label{sec:bivariate}
 
-Extending the univariate analysis of the previous subsection, the bivariate analysis reveals how the feature correlate to each other. \autoref{fig:corr} (a) and \autoref{fig:corr} (b) are both producing the same information but presented differently. On \autoref{fig:corr} (a) the exact values of the linear relationships are shown, while on \autoref{fig:corr} (b) clear clusters of high and low linear correlation are formed. Out of these clusters that are present in \autoref{fig:corr} (b) some are expected but others are not.
+Extending the univariate analysis of the previous subsection, the bivariate analysis reveals how the features correlate to each other. \autoref{fig:corr} (a) and \autoref{fig:corr} (b) are both producing the same information but presented differently. On \autoref{fig:corr} (a) the exact values of the linear relationships are shown, while on \autoref{fig:corr} (b) clear clusters of high and low linear correlation are formed. Out of these clusters that are present in \autoref{fig:corr} (b) some are expected but others are not.
 
 For measuring the correaltion, the \textit{Pearson's correlation coefficient} is used, which measures the covariance of two random variables, $X$ and $Y$, and normalizes it with the product of their standard deviations, or:
 
@@ -195,9 +197,9 @@ For measuring the correaltion, the \textit{Pearson's correlation coefficient} is
 
 \begin{figure}[h]
     \centering
-    \subfloat[Recipe length distribution with KDE]
+    \subfloat[Correlation matrix]
     {\includegraphics[width=.4\textwidth,height=.25\textheight]{./output/1.e.corrplot-1.pdf}}
-    \subfloat[Top 20 Ingredients]
+    \subfloat[Correlation network]
     {\includegraphics[width=.6\textwidth]{./output/1.f.corplot-2.pdf}}
     \caption{}
     \label{fig:corr}
@@ -288,35 +290,413 @@ The main takeaway from this analysis is that the dataset, although clean and sim
 
 \subsection{Multivariate Analysis}
 \label{sec:multivariate}
-\blindtext
 
+With the information revealed from PCA, we can now plot the highest and the lowest loadings of the four principal components, for each level of the target variable. The reason for plotting this graph is to investigate wheather some level of the \textit{type} variable, behaves different that the others when plotted on the same axis. 
 
-\clearpage
+%----------
+\vspace*{1em}
+\begin{figure}[!h]
+\centering
+\includegraphics[width=\textwidth]{./output/1.g.multivariate-analysis.pdf}
+\caption{}
+\label{fig:multi}
+\end{figure}
+\vspace{2em}
+%----------
 
+In all four subplots of \autoref{fig:multi} we identify the same exact behaviour. The coefficient of the regression is negative on the \textit{total.sulfure.dioxide} against \textit{alcohol} axis for all levels, positive on the \textit{total.sulfure.dioxide} against \textit{free.sulfure.dioxide} axis, and close to zero for the other two PC scores. This finding, while not very exciting, is important, because it confirms once again that the relationship of our target variable \textit{type} and the features identified at the dimensionality reduction stage (\textit{total.sulfure.dioxide}, \textit{free.sulfure.dioxide}, \textit{alcohol}, \textit{residual.sugar}, and \textit{fixed.acidity}) are important for establishing a good model.
 
 % ------------------------------------------------------------------------------------------------------
-\section{Methods}
+\section{Models}
 \label{sec:methods}
-\blindtext
+In this section, the methods used to create the model will be discussed. This includes, the baseline model that is deterministic in nature, as well as the various Bayesian approaches to it. Firstly, the reason to choose neural networks as the model of choice, is due to the complexity of the research question, in combination with the complexity of the dataset as demostrated from the exploration of the dataset. Secondly, the Bayesian approach is important to make the neural network prediction \textit{stochastic}. 
+
+After the sucessful training of the neural network, the predictions are deterministic. That means that each time a specific input is passed through the NN, the same output is produced. While this can be useful in certain applications, the goal of this project is to find a metric for the \textit{uncertainty} of the predictions. Thit is impossible to do with a deterministic process as samples cannot be drawn from  the posterior distribution to estimate it.  Therefore, after establishing a baseline, non-bayesian NN, to prove that the problem can be solved with good enough accuracy, the network can become Bayesian by changing some of its layers to Bayesian layers.
 
 \subsection{Base Neural Network}
 \label{sec:NN}
-\blindtext
 
-\subsection{Bayesian Neural Network}
+
+\tikzset{every picture/.style={line width=0.75pt}} %set default line width to 0.75pt        
+
+\begin{tikzpicture}[x=0.75pt,y=0.75pt,yscale=-1,xscale=1]
+%uncomment if require: \path (0,329); %set diagram left start at 0, and has height of 329
+
+%Shape: Rectangle [id:dp6981379495439248] 
+\draw   (11,142.63) -- (50.93,142.63) -- (50.93,260.63) -- (11,260.63) -- cycle ;
+%Shape: Rectangle [id:dp3116438864292579] 
+\draw   (209,128.63) -- (248.93,128.63) -- (248.93,276.63) -- (209,276.63) -- cycle ;
+%Shape: Rectangle [id:dp5504046010346768] 
+\draw   (110,92.63) -- (149.93,92.63) -- (149.93,309.63) -- (110,309.63) -- cycle ;
+%Straight Lines [id:da19613399481990768] 
+\draw    (149.93,202.63) -- (205.93,202.63) ;
+\draw [shift={(207.93,202.63)}, rotate = 180] [color={rgb, 255:red, 0; green, 0; blue, 0 }  ][line width=0.75]    (10.93,-3.29) .. controls (6.95,-1.4) and (3.31,-0.3) .. (0,0) .. controls (3.31,0.3) and (6.95,1.4) .. (10.93,3.29)   ;
+%Straight Lines [id:da7665092917579182] 
+\draw    (50.93,202.63) -- (106.93,202.63) ;
+\draw [shift={(108.93,202.63)}, rotate = 180] [color={rgb, 255:red, 0; green, 0; blue, 0 }  ][line width=0.75]    (10.93,-3.29) .. controls (6.95,-1.4) and (3.31,-0.3) .. (0,0) .. controls (3.31,0.3) and (6.95,1.4) .. (10.93,3.29)   ;
+%Straight Lines [id:da7866250847012999] 
+\draw    (250.93,202.63) -- (306.93,202.63) ;
+\draw [shift={(308.93,202.63)}, rotate = 180] [color={rgb, 255:red, 0; green, 0; blue, 0 }  ][line width=0.75]    (10.93,-3.29) .. controls (6.95,-1.4) and (3.31,-0.3) .. (0,0) .. controls (3.31,0.3) and (6.95,1.4) .. (10.93,3.29)   ;
+%Shape: Rectangle [id:dp312756082115234] 
+\draw   (308,156.12) -- (347.93,156.12) -- (347.93,250.12) -- (308,250.12) -- cycle ;
+
+% Text Node
+\draw (13,115) node [anchor=north west][inner sep=0.75pt]   [align=left] {Input};
+% Text Node
+\draw (206,103) node [anchor=north west][inner sep=0.75pt]   [align=left] {\begin{minipage}[lt]{32.19pt}\setlength\topsep{0pt}
+\begin{center}
+Dense
+\end{center}
+
+\end{minipage}};
+% Text Node
+\draw (106,65) node [anchor=north west][inner sep=0.75pt]   [align=left] {Dense};
+% Text Node
+\draw (21,237.4) node [anchor=north west][inner sep=0.75pt]    {$12$};
+% Text Node
+\draw (215,257.4) node [anchor=north west][inner sep=0.75pt]    {$160$};
+% Text Node
+\draw (115,288.4) node [anchor=north west][inner sep=0.75pt]    {$416$};
+% Text Node
+\draw (125,16) node [anchor=north west][inner sep=0.75pt]  [font=\large] [align=left] {\textbf{Base NN}};
+% Text Node
+\draw (304,133) node [anchor=north west][inner sep=0.75pt]   [align=left] {Output};
+% Text Node
+\draw (321,229.4) node [anchor=north west][inner sep=0.75pt]    {$3$};
+
+
+\end{tikzpicture}
+
+
+%----------
+\vspace*{1em}
+\begin{figure}[!h]
+\centering
+\includegraphics[width=\textwidth]{./output/2.a.history-base.pdf}
+\caption{}
+\label{fig:base}
+\end{figure}
+\vspace{2em}
+%----------
+
+
+\subsection{Monte Carlo Dropout}
 \label{sec:BNN}
 \blindtext
 
+
+
+\tikzset{every picture/.style={line width=0.75pt}} %set default line width to 0.75pt        
+
+\begin{tikzpicture}[x=0.75pt,y=0.75pt,yscale=-1,xscale=1]
+%uncomment if require: \path (0,329); %set diagram left start at 0, and has height of 329
+
+%Shape: Rectangle [id:dp6981379495439248] 
+\draw   (11,142.63) -- (50.93,142.63) -- (50.93,260.63) -- (11,260.63) -- cycle ;
+%Straight Lines [id:da21346322770194326] 
+\draw    (50.93,201.63) -- (106.93,201.63) ;
+\draw [shift={(108.93,201.63)}, rotate = 180] [color={rgb, 255:red, 0; green, 0; blue, 0 }  ][line width=0.75]    (10.93,-3.29) .. controls (6.95,-1.4) and (3.31,-0.3) .. (0,0) .. controls (3.31,0.3) and (6.95,1.4) .. (10.93,3.29)   ;
+%Shape: Rectangle [id:dp29000115422593087] 
+\draw   (108,125.63) -- (147.93,125.63) -- (147.93,276.63) -- (108,276.63) -- cycle ;
+%Shape: Rectangle [id:dp3116438864292579] 
+\draw   (209,128.63) -- (248.93,128.63) -- (248.93,276.63) -- (209,276.63) -- cycle ;
+%Shape: Rectangle [id:dp5504046010346768] 
+\draw   (308,92.63) -- (347.93,92.63) -- (347.93,309.63) -- (308,309.63) -- cycle ;
+%Shape: Rectangle [id:dp2926920978374945] 
+\draw   (412,95.63) -- (451.93,95.63) -- (451.93,309.63) -- (412,309.63) -- cycle ;
+%Shape: Rectangle [id:dp43902801324987895] 
+\draw   (512,156.63) -- (551.93,156.63) -- (551.93,248.63) -- (512,248.63) -- cycle ;
+%Straight Lines [id:da19613399481990768] 
+\draw    (149.93,202.63) -- (205.93,202.63) ;
+\draw [shift={(207.93,202.63)}, rotate = 180] [color={rgb, 255:red, 0; green, 0; blue, 0 }  ][line width=0.75]    (10.93,-3.29) .. controls (6.95,-1.4) and (3.31,-0.3) .. (0,0) .. controls (3.31,0.3) and (6.95,1.4) .. (10.93,3.29)   ;
+%Straight Lines [id:da7665092917579182] 
+\draw    (248.93,202.63) -- (304.93,202.63) ;
+\draw [shift={(306.93,202.63)}, rotate = 180] [color={rgb, 255:red, 0; green, 0; blue, 0 }  ][line width=0.75]    (10.93,-3.29) .. controls (6.95,-1.4) and (3.31,-0.3) .. (0,0) .. controls (3.31,0.3) and (6.95,1.4) .. (10.93,3.29)   ;
+%Straight Lines [id:da00009484808513526843] 
+\draw    (350.93,203.63) -- (406.93,203.63) ;
+\draw [shift={(408.93,203.63)}, rotate = 180] [color={rgb, 255:red, 0; green, 0; blue, 0 }  ][line width=0.75]    (10.93,-3.29) .. controls (6.95,-1.4) and (3.31,-0.3) .. (0,0) .. controls (3.31,0.3) and (6.95,1.4) .. (10.93,3.29)   ;
+%Straight Lines [id:da5648066531472558] 
+\draw    (450.93,202.63) -- (506.93,202.63) ;
+\draw [shift={(508.93,202.63)}, rotate = 180] [color={rgb, 255:red, 0; green, 0; blue, 0 }  ][line width=0.75]    (10.93,-3.29) .. controls (6.95,-1.4) and (3.31,-0.3) .. (0,0) .. controls (3.31,0.3) and (6.95,1.4) .. (10.93,3.29)   ;
+
+% Text Node
+\draw (7,104) node [anchor=north west][inner sep=0.75pt]   [align=left] {Dense};
+% Text Node
+\draw (104,91) node [anchor=north west][inner sep=0.75pt]   [align=left] {Dense};
+% Text Node
+\draw (211,84) node [anchor=north west][inner sep=0.75pt]   [align=left] {\begin{minipage}[lt]{24.81pt}\setlength\topsep{0pt}
+\begin{center}
+MC\\Drop
+\end{center}
+
+\end{minipage}};
+% Text Node
+\draw (414,49) node [anchor=north west][inner sep=0.75pt]   [align=left] {\begin{minipage}[lt]{24.81pt}\setlength\topsep{0pt}
+\begin{center}
+MC\\Drop
+\end{center}
+
+\end{minipage}};
+% Text Node
+\draw (304,65) node [anchor=north west][inner sep=0.75pt]   [align=left] {Dense};
+% Text Node
+\draw (510,134) node [anchor=north west][inner sep=0.75pt]   [align=left] {Dense};
+% Text Node
+\draw (21,237.4) node [anchor=north west][inner sep=0.75pt]    {$12$};
+% Text Node
+\draw (118,253.4) node [anchor=north west][inner sep=0.75pt]    {$32$};
+% Text Node
+\draw (219,254.4) node [anchor=north west][inner sep=0.75pt]    {$32$};
+% Text Node
+\draw (313,288.4) node [anchor=north west][inner sep=0.75pt]    {$160$};
+% Text Node
+\draw (417,289.4) node [anchor=north west][inner sep=0.75pt]    {$160$};
+% Text Node
+\draw (526,226.4) node [anchor=north west][inner sep=0.75pt]    {$3$};
+% Text Node
+\draw (161,10) node [anchor=north west][inner sep=0.75pt]  [font=\large] [align=left] {\textbf{Monte Carlo Dropout BNN}};
+
+
+\end{tikzpicture}
+
+
+%----------
+\vspace*{1em}
+\begin{figure}[!h]
+\centering
+\includegraphics[width=\textwidth]{./output/2.d.history-mcdrop.pdf}
+\caption{}
+\label{fig:mcdrop}
+\end{figure}
+\vspace{2em}
+%----------
+
+\subsection{Other Bayesian Approaches}
+\label{sec:other}
+\blindtext
+
+
+
+\tikzset{every picture/.style={line width=0.75pt}} %set default line width to 0.75pt        
+
+\begin{tikzpicture}[x=0.75pt,y=0.75pt,yscale=-1,xscale=1]
+%uncomment if require: \path (0,410); %set diagram left start at 0, and has height of 410
+
+%Straight Lines [id:da7520912463319658] 
+\draw    (210.86,-2.07) -- (208.93,407.35) ;
+%Shape: Rectangle [id:dp6578673858538546] 
+\draw   (282,67.5) -- (387.57,67.5) -- (387.57,101) -- (282,101) -- cycle ;
+%Straight Lines [id:da17416205969228615] 
+\draw    (333.57,100) -- (333.57,132.5) ;
+\draw [shift={(333.57,134.5)}, rotate = 270] [color={rgb, 255:red, 0; green, 0; blue, 0 }  ][line width=0.75]    (10.93,-3.29) .. controls (6.95,-1.4) and (3.31,-0.3) .. (0,0) .. controls (3.31,0.3) and (6.95,1.4) .. (10.93,3.29)   ;
+%Shape: Rectangle [id:dp9625306176469661] 
+\draw   (271.57,133.5) -- (395.57,133.5) -- (395.57,167) -- (271.57,167) -- cycle ;
+%Straight Lines [id:da12613771464913315] 
+\draw    (334.57,167) -- (334.57,199.5) ;
+\draw [shift={(334.57,201.5)}, rotate = 270] [color={rgb, 255:red, 0; green, 0; blue, 0 }  ][line width=0.75]    (10.93,-3.29) .. controls (6.95,-1.4) and (3.31,-0.3) .. (0,0) .. controls (3.31,0.3) and (6.95,1.4) .. (10.93,3.29)   ;
+%Shape: Rectangle [id:dp8562897990585834] 
+\draw   (263.57,200.5) -- (406.57,200.5) -- (406.57,234) -- (263.57,234) -- cycle ;
+%Straight Lines [id:da4444814291856598] 
+\draw    (334.57,233) -- (334.57,265.5) ;
+\draw [shift={(334.57,267.5)}, rotate = 270] [color={rgb, 255:red, 0; green, 0; blue, 0 }  ][line width=0.75]    (10.93,-3.29) .. controls (6.95,-1.4) and (3.31,-0.3) .. (0,0) .. controls (3.31,0.3) and (6.95,1.4) .. (10.93,3.29)   ;
+%Shape: Rectangle [id:dp48373983572684565] 
+\draw   (263.57,266.5) -- (406.57,266.5) -- (406.57,300) -- (263.57,300) -- cycle ;
+%Straight Lines [id:da014946150652792367] 
+\draw    (334.57,299) -- (334.57,331.5) ;
+\draw [shift={(334.57,333.5)}, rotate = 270] [color={rgb, 255:red, 0; green, 0; blue, 0 }  ][line width=0.75]    (10.93,-3.29) .. controls (6.95,-1.4) and (3.31,-0.3) .. (0,0) .. controls (3.31,0.3) and (6.95,1.4) .. (10.93,3.29)   ;
+%Shape: Rectangle [id:dp37604395604633134] 
+\draw   (267.57,332.5) -- (401.57,332.5) -- (401.57,366) -- (267.57,366) -- cycle ;
+%Shape: Rectangle [id:dp3073637189530949] 
+\draw   (498.57,69.5) -- (622.57,69.5) -- (622.57,103) -- (498.57,103) -- cycle ;
+%Straight Lines [id:da8848887857143579] 
+\draw    (561.57,102) -- (561.57,134.5) ;
+\draw [shift={(561.57,136.5)}, rotate = 270] [color={rgb, 255:red, 0; green, 0; blue, 0 }  ][line width=0.75]    (10.93,-3.29) .. controls (6.95,-1.4) and (3.31,-0.3) .. (0,0) .. controls (3.31,0.3) and (6.95,1.4) .. (10.93,3.29)   ;
+%Shape: Rectangle [id:dp4266654277213535] 
+\draw   (508.57,135.5) -- (616.57,135.5) -- (616.57,169) -- (508.57,169) -- cycle ;
+%Straight Lines [id:da06249075020880501] 
+\draw    (563.57,304) -- (563.57,336.5) ;
+\draw [shift={(563.57,338.5)}, rotate = 270] [color={rgb, 255:red, 0; green, 0; blue, 0 }  ][line width=0.75]    (10.93,-3.29) .. controls (6.95,-1.4) and (3.31,-0.3) .. (0,0) .. controls (3.31,0.3) and (6.95,1.4) .. (10.93,3.29)   ;
+%Shape: Rectangle [id:dp7312721900848995] 
+\draw   (513.57,337.5) -- (612.57,337.5) -- (612.57,371) -- (513.57,371) -- cycle ;
+%Straight Lines [id:da5460497639581126] 
+\draw    (561.57,169) -- (561.57,201.5) ;
+\draw [shift={(561.57,203.5)}, rotate = 270] [color={rgb, 255:red, 0; green, 0; blue, 0 }  ][line width=0.75]    (10.93,-3.29) .. controls (6.95,-1.4) and (3.31,-0.3) .. (0,0) .. controls (3.31,0.3) and (6.95,1.4) .. (10.93,3.29)   ;
+%Shape: Rectangle [id:dp26552065436119876] 
+\draw   (494.57,202.5) -- (628.57,202.5) -- (628.57,236) -- (494.57,236) -- cycle ;
+%Straight Lines [id:da7458999475229033] 
+\draw    (561.57,237) -- (561.57,269.5) ;
+\draw [shift={(561.57,271.5)}, rotate = 270] [color={rgb, 255:red, 0; green, 0; blue, 0 }  ][line width=0.75]    (10.93,-3.29) .. controls (6.95,-1.4) and (3.31,-0.3) .. (0,0) .. controls (3.31,0.3) and (6.95,1.4) .. (10.93,3.29)   ;
+%Shape: Rectangle [id:dp5970670487921053] 
+\draw   (508.57,270.5) -- (616.57,270.5) -- (616.57,304) -- (508.57,304) -- cycle ;
+%Shape: Rectangle [id:dp010365484916174061] 
+\draw   (37,67.93) -- (142.57,67.93) -- (142.57,101.43) -- (37,101.43) -- cycle ;
+%Straight Lines [id:da435445969504787] 
+\draw    (88.57,100.43) -- (88.57,132.93) ;
+\draw [shift={(88.57,134.93)}, rotate = 270] [color={rgb, 255:red, 0; green, 0; blue, 0 }  ][line width=0.75]    (10.93,-3.29) .. controls (6.95,-1.4) and (3.31,-0.3) .. (0,0) .. controls (3.31,0.3) and (6.95,1.4) .. (10.93,3.29)   ;
+%Shape: Rectangle [id:dp8334163094493718] 
+\draw   (17.57,133.93) -- (161.57,133.93) -- (161.57,167.43) -- (17.57,167.43) -- cycle ;
+%Straight Lines [id:da7154001058216675] 
+\draw    (89.57,167.43) -- (89.57,199.93) ;
+\draw [shift={(89.57,201.93)}, rotate = 270] [color={rgb, 255:red, 0; green, 0; blue, 0 }  ][line width=0.75]    (10.93,-3.29) .. controls (6.95,-1.4) and (3.31,-0.3) .. (0,0) .. controls (3.31,0.3) and (6.95,1.4) .. (10.93,3.29)   ;
+%Shape: Rectangle [id:dp0885963983905822] 
+\draw   (18.57,200.93) -- (161.57,200.93) -- (161.57,234.43) -- (18.57,234.43) -- cycle ;
+%Straight Lines [id:da20534784584705146] 
+\draw    (89.57,233.43) -- (89.57,265.93) ;
+\draw [shift={(89.57,267.93)}, rotate = 270] [color={rgb, 255:red, 0; green, 0; blue, 0 }  ][line width=0.75]    (10.93,-3.29) .. controls (6.95,-1.4) and (3.31,-0.3) .. (0,0) .. controls (3.31,0.3) and (6.95,1.4) .. (10.93,3.29)   ;
+%Shape: Rectangle [id:dp4577629971609587] 
+\draw   (1.57,266.93) -- (177.57,266.93) -- (177.57,300.43) -- (1.57,300.43) -- cycle ;
+%Straight Lines [id:da8408482777880153] 
+\draw    (89.57,299.43) -- (89.57,331.93) ;
+\draw [shift={(89.57,333.93)}, rotate = 270] [color={rgb, 255:red, 0; green, 0; blue, 0 }  ][line width=0.75]    (10.93,-3.29) .. controls (6.95,-1.4) and (3.31,-0.3) .. (0,0) .. controls (3.31,0.3) and (6.95,1.4) .. (10.93,3.29)   ;
+%Shape: Rectangle [id:dp6122483307594775] 
+\draw   (47.57,332.93) -- (131.57,332.93) -- (131.57,366.43) -- (47.57,366.43) -- cycle ;
+%Curve Lines [id:da019301893461343367] 
+\draw    (337,366) .. controls (490.93,516.62) and (456.93,-175.65) .. (559.93,72.53) ;
+\draw [shift={(559.93,72.53)}, rotate = 247.45999999999998] [color={rgb, 255:red, 0; green, 0; blue, 0 }  ][line width=0.75]    (10.93,-3.29) .. controls (6.95,-1.4) and (3.31,-0.3) .. (0,0) .. controls (3.31,0.3) and (6.95,1.4) .. (10.93,3.29)   ;
+
+% Text Node
+\draw (293.57,76) node [anchor=north west][inner sep=0.75pt]   [align=left] {\textbf{Input}};
+% Text Node
+\draw (519.57,345.86) node [anchor=north west][inner sep=0.75pt]   [align=left] {\textbf{Flipout}};
+% Text Node
+\draw (593.57,345.26) node [anchor=north west][inner sep=0.75pt]    {$3$};
+% Text Node
+\draw (363.57,75.4) node [anchor=north west][inner sep=0.75pt]    {$12$};
+% Text Node
+\draw (273.57,143) node [anchor=north west][inner sep=0.75pt]   [align=left] {Flipout};
+% Text Node
+\draw (267.57,210) node [anchor=north west][inner sep=0.75pt]   [align=left] {Dense};
+% Text Node
+\draw (267.57,276) node [anchor=north west][inner sep=0.75pt]   [align=left] {Dense};
+% Text Node
+\draw (271.57,341) node [anchor=north west][inner sep=0.75pt]   [align=left] {Dense};
+% Text Node
+\draw (501.57,78) node [anchor=north west][inner sep=0.75pt]   [align=left] {Dense};
+% Text Node
+\draw (507.57,143) node [anchor=north west][inner sep=0.75pt]   [align=left] {Dense};
+% Text Node
+\draw (364.57,143.4) node [anchor=north west][inner sep=0.75pt]    {$416$};
+% Text Node
+\draw (375.57,210.4) node [anchor=north west][inner sep=0.75pt]    {$160$};
+% Text Node
+\draw (371.57,276.4) node [anchor=north west][inner sep=0.75pt]    {$416$};
+% Text Node
+\draw (368.57,341.4) node [anchor=north west][inner sep=0.75pt]    {$416$};
+% Text Node
+\draw (591.57,78.4) node [anchor=north west][inner sep=0.75pt]    {$288$};
+% Text Node
+\draw (587.57,144.4) node [anchor=north west][inner sep=0.75pt]    {$160$};
+% Text Node
+\draw (498.57,211) node [anchor=north west][inner sep=0.75pt]   [align=left] {Dense};
+% Text Node
+\draw (595.57,211.4) node [anchor=north west][inner sep=0.75pt]    {$416$};
+% Text Node
+\draw (507.57,278) node [anchor=north west][inner sep=0.75pt]   [align=left] {Dense};
+% Text Node
+\draw (587.57,279.4) node [anchor=north west][inner sep=0.75pt]    {$160$};
+% Text Node
+\draw (286.57,9) node [anchor=north west][inner sep=0.75pt]  [font=\small] [align=left] {\begin{minipage}[lt]{65.92pt}\setlength\topsep{0pt}
+\begin{center}
+\textbf{Dense Flipout }\\\textbf{BNN}
+\end{center}
+
+\end{minipage}};
+% Text Node
+\draw (30,9.71) node [anchor=north west][inner sep=0.75pt]  [font=\small] [align=left] {\begin{minipage}[lt]{78.7pt}\setlength\topsep{0pt}
+\begin{center}
+\textbf{Variational Layer }\\\textbf{BNN}
+\end{center}
+
+\end{minipage}};
+% Text Node
+\draw (48.57,76.43) node [anchor=north west][inner sep=0.75pt]   [align=left] {\textbf{Input}};
+% Text Node
+\draw (118.57,75.83) node [anchor=north west][inner sep=0.75pt]    {$12$};
+% Text Node
+\draw (20.57,144.43) node [anchor=north west][inner sep=0.75pt]   [align=left] {Variational};
+% Text Node
+\draw (22.57,210.43) node [anchor=north west][inner sep=0.75pt]   [align=left] {Dense};
+% Text Node
+\draw (6.57,275.43) node [anchor=north west][inner sep=0.75pt]   [align=left] {Dense};
+% Text Node
+\draw (51.57,342.43) node [anchor=north west][inner sep=0.75pt]   [align=left] {\textbf{Output}};
+% Text Node
+\draw (128.57,143.83) node [anchor=north west][inner sep=0.75pt]    {$288$};
+% Text Node
+\draw (130.57,210.83) node [anchor=north west][inner sep=0.75pt]    {$288$};
+% Text Node
+\draw (146.57,276.83) node [anchor=north west][inner sep=0.75pt]    {$416$};
+% Text Node
+\draw (119.57,341.83) node [anchor=north west][inner sep=0.75pt]    {$3$};
+
+
+\end{tikzpicture}
+
+
+
+\begin{figure}[]
+    \centering
+    \subfloat[Flipout Architecture]
+    {\includegraphics[width=.5\textwidth]{./output/2.c.history-flip.pdf}}
+    \subfloat[Variational Infernece Architecture]
+    {\includegraphics[width=.5\textwidth]{./output/2.b.history-var.pdf}}
+    \caption{}
+    \label{fig:histories}
+\end{figure}
 
 \subsection{Model Validation}
 \label{sec:validation}
 \blindtext
 
+%----------
+\vspace*{1em}
+\begin{figure}[!h]
+\centering
+\includegraphics[width=\textwidth]{./output/2.e.confmat-base.pdf}
+\caption{}
+\label{fig:mcdrop}
+\end{figure}
+\vspace{2em}
+%----------
+
+\begin{figure}[!h]
+    \centering
+    \subfloat[Class 1 Explanation]
+    {\includegraphics[width=.33\textwidth]{./output/2.f.confmat-var.pdf}}
+    \subfloat[Class 2 Explanation]
+    {\includegraphics[width=.33\textwidth]{./output/2.g.confmat-flip.pdf}}
+    \subfloat[Class 3 Explanation]
+    {\includegraphics[width=.33\textwidth]{./output/2.h.confmat-mcdrop.pdf}}
+    \caption{}
+    \label{fig:shap_exp}
+\end{figure}
+
 \subsection{Model Explanation}
 \label{sec:explanation}
 \blindtext
 
-\clearpage
+%----------
+\vspace*{1em}
+\begin{figure}[!h]
+\centering
+\includegraphics[width=\textwidth]{./output/2.i.shap-summary.pdf}
+\caption{}
+\label{fig:shap_sum}
+\end{figure}
+\vspace{2em}
+%----------
+
+\begin{figure}[!h]
+    \centering
+    \subfloat[Class 1 Explanation]
+    {\includegraphics[width=.33\textwidth]{./output/2.j.shap-class0.pdf}}
+    \subfloat[Class 2 Explanation]
+    {\includegraphics[width=.33\textwidth]{./output/2.k.shap-class1.pdf}}
+    \subfloat[Class 3 Explanation]
+    {\includegraphics[width=.33\textwidth]{./output/2.l.shap-class2.pdf}}
+    \caption{}
+    \label{fig:shap_exp}
+\end{figure}
 
 % ------------------------------------------------------------------------------------------------------
 \section{Results}
