@@ -7,23 +7,23 @@
 \contentsline {figure}{\numberline {5}{\ignorespaces centered image\relax }}{5}{figure.caption.9}%
 \contentsline {figure}{\numberline {6}{\ignorespaces centered image\relax }}{6}{figure.caption.10}%
 \contentsline {figure}{\numberline {7}{\ignorespaces \relax }}{7}{figure.caption.11}%
-\contentsline {figure}{\numberline {8}{\ignorespaces Baseline Architecture and Epoch History\relax }}{9}{figure.caption.12}%
-\contentsline {subfigure}{\numberline {(a)}{\ignorespaces {Base Model Neural Network Architecture}}}{9}{subfigure.8.1}%
-\contentsline {subfigure}{\numberline {(b)}{\ignorespaces {Base model History of epochs}}}{9}{subfigure.8.2}%
+\contentsline {figure}{\numberline {8}{\ignorespaces Baseline Architecture and Epoch History\relax }}{8}{figure.caption.12}%
+\contentsline {subfigure}{\numberline {(a)}{\ignorespaces {Base Model Neural Network Architecture}}}{8}{subfigure.8.1}%
+\contentsline {subfigure}{\numberline {(b)}{\ignorespaces {Base model History of epochs}}}{8}{subfigure.8.2}%
 \contentsline {figure}{\numberline {9}{\ignorespaces Monte Carlo Dropout Architecture and Epoch History\relax }}{9}{figure.caption.13}%
 \contentsline {subfigure}{\numberline {(a)}{\ignorespaces {Monte Carlo Dropout NN Architecture}}}{9}{subfigure.9.1}%
 \contentsline {subfigure}{\numberline {(b)}{\ignorespaces {Monte Carlo Dropout History of epochs}}}{9}{subfigure.9.2}%
-\contentsline {figure}{\numberline {10}{\ignorespaces History of other Bayesian Models (Flipout and Dense Variational)\relax }}{11}{figure.caption.14}%
-\contentsline {subfigure}{\numberline {(a)}{\ignorespaces {Variational layers History of epochs}}}{11}{subfigure.10.1}%
-\contentsline {subfigure}{\numberline {(b)}{\ignorespaces {Flipout layers History of epochs}}}{11}{subfigure.10.2}%
-\contentsline {figure}{\numberline {11}{\ignorespaces \relax }}{11}{figure.caption.15}%
-\contentsline {figure}{\numberline {12}{\ignorespaces \relax }}{12}{figure.caption.16}%
-\contentsline {subfigure}{\numberline {(a)}{\ignorespaces {Class 1 Explanation}}}{12}{subfigure.12.1}%
-\contentsline {subfigure}{\numberline {(b)}{\ignorespaces {Class 2 Explanation}}}{12}{subfigure.12.2}%
-\contentsline {subfigure}{\numberline {(c)}{\ignorespaces {Class 3 Explanation}}}{12}{subfigure.12.3}%
-\contentsline {figure}{\numberline {13}{\ignorespaces \relax }}{13}{figure.caption.17}%
-\contentsline {figure}{\numberline {14}{\ignorespaces \relax }}{14}{figure.caption.18}%
-\contentsline {subfigure}{\numberline {(a)}{\ignorespaces {Class 1 Explanation}}}{14}{subfigure.14.1}%
-\contentsline {subfigure}{\numberline {(b)}{\ignorespaces {Class 2 Explanation}}}{14}{subfigure.14.2}%
-\contentsline {subfigure}{\numberline {(c)}{\ignorespaces {Class 3 Explanation}}}{14}{subfigure.14.3}%
-\contentsline {figure}{\numberline {15}{\ignorespaces Look at this scenario tree with funny times $t_{1}$ and scenarios $s_{1}$ etc.\relax }}{14}{figure.caption.19}%
+\contentsline {figure}{\numberline {10}{\ignorespaces Variational and Flipout model Architectures\relax }}{10}{figure.caption.14}%
+\contentsline {figure}{\numberline {11}{\ignorespaces History of other Bayesian Models (Flipout and Dense Variational)\relax }}{11}{figure.caption.15}%
+\contentsline {subfigure}{\numberline {(a)}{\ignorespaces {Variational layers History of epochs}}}{11}{subfigure.11.1}%
+\contentsline {subfigure}{\numberline {(b)}{\ignorespaces {Flipout layers History of epochs}}}{11}{subfigure.11.2}%
+\contentsline {figure}{\numberline {12}{\ignorespaces Base Model Confusion matrix\relax }}{11}{figure.caption.16}%
+\contentsline {figure}{\numberline {13}{\ignorespaces Confusion matrices for all the Bayesian Models\relax }}{12}{figure.caption.17}%
+\contentsline {subfigure}{\numberline {(a)}{\ignorespaces {Variational Confusion matrix}}}{12}{subfigure.13.1}%
+\contentsline {subfigure}{\numberline {(b)}{\ignorespaces {Flipout Confusion matrix}}}{12}{subfigure.13.2}%
+\contentsline {subfigure}{\numberline {(c)}{\ignorespaces {MC dropout Confusion matrix}}}{12}{subfigure.13.3}%
+\contentsline {figure}{\numberline {14}{\ignorespaces Shapley Values on a feature by feature level\relax }}{12}{figure.caption.18}%
+\contentsline {figure}{\numberline {15}{\ignorespaces Shap values in a value by value level\relax }}{13}{figure.caption.19}%
+\contentsline {subfigure}{\numberline {(a)}{\ignorespaces {Class 1 Explanation}}}{13}{subfigure.15.1}%
+\contentsline {subfigure}{\numberline {(b)}{\ignorespaces {Class 2 Explanation}}}{13}{subfigure.15.2}%
+\contentsline {subfigure}{\numberline {(c)}{\ignorespaces {Class 3 Explanation}}}{13}{subfigure.15.3}%

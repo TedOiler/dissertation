@@ -168,9 +168,9 @@ A combination of the programming languages \textsf{R} and \textsf{Python} are us
 \section{Exploratory Data Analysis}
 In this section a basic overview of the dataset and its properties is going to be presented. Firstly, various statistics regarding the dataset are presented in the form of graphs, in univariate, bivariate and multivariate analysis. Afterwards, the dataset it reduced in dimensions with two techniques (a linear and a non-linear) in order to be able to plot it with a two-dimensional graph. This is also a quick way to identify potential anomalies as well visually. The reason of the extended EDA, is to understand what preprocessing steps could be needed in order for the future models to work correctly. Also, the knowledge gained from this exploration of the dataset will help in the explanation of the model in the \textit{Model Validation} section. 
 
-\subsection{Univatiate Analysis}
+\subsection{Univariate Analysis}
 \label{sec:univariate}
-The dataset, consist of twelve feature variables, out of which only one (\textit{quality}) is categorical, while all the others are numeric. The target varaiable (\textit{type}) is also a target variable with three levels \textsf{type=1, type=2, type=3}. There are no missing values.
+The dataset, consist of twelve feature variables, out of which only one (\textit{quality}) is categorical, while all the others are numeric. The target variable (\textit{type}) is also a target variable with three levels \textsf{type=1, type=2, type=3}. There are no missing values.
 
 \vspace*{1em}
 \begin{figure}[!h]
@@ -189,7 +189,7 @@ In \autoref{fig:uni}, the target variable type is represented by the orange barp
 
 Extending the univariate analysis of the previous subsection, the bivariate analysis reveals how the features correlate to each other. \autoref{fig:corr} (a) and \autoref{fig:corr} (b) are both producing the same information but presented differently. On \autoref{fig:corr} (a) the exact values of the linear relationships are shown, while on \autoref{fig:corr} (b) clear clusters of high and low linear correlation are formed. Out of these clusters that are present in \autoref{fig:corr} (b) some are expected but others are not.
 
-For measuring the correaltion, the \textit{Pearson's correlation coefficient} is used, which measures the covariance of two random variables, $X$ and $Y$, and normalizes it with the product of their standard deviations, or:
+For measuring the correlation, the \textit{Pearson's correlation coefficient} is used, which measures the covariance of two random variables, $X$ and $Y$, and normalizes it with the product of their standard deviations, or:
 
 \begin{equation}
 \rho(x,y) = \frac{\text{cov}(x,y)}{\text{std}(x)\text{std}(y)}
@@ -221,7 +221,7 @@ Using the singular value decomposition to factorize the data matrix $X$, we prod
 \vspace*{1em}
 \begin{figure}[!h]
 \centering
-\includegraphics[width=\textwidth]{./output/1.a.pca-var-expl.pdf}
+\includegraphics[width=0.7\textwidth]{./output/1.a.pca-var-expl.pdf}
 \caption{}
 \label{fig:var_expl}
 \end{figure}
@@ -491,10 +491,12 @@ It is clear in \autoref{fig:mcdrop} (b) that there is a lot more variance in the
 
 \subsection{Other Bayesian Approaches}
 \label{sec:other}
-\blindtext
 
+In addition the Monte Carlo Dropout model, various other approaches have been tryied. Their results on training where not as good as the MC dropout model, hence they are presented in this section and their specific architecture is in \autoref{fig:other}. A more robust way of validating the models is presented in \autoref{sec:results}.
+
+\begin{figure}
+\centering
 \tikzset{every picture/.style={line width=0.75pt}} %set default line width to 0.75pt        
-
 \begin{tikzpicture}[x=0.75pt,y=0.75pt,yscale=-1,xscale=1]
 %uncomment if require: \path (0,410); %set diagram left start at 0, and has height of 410
 
@@ -644,11 +646,12 @@ It is clear in \autoref{fig:mcdrop} (b) that there is a lot more variance in the
 \draw (146.57,276.83) node [anchor=north west][inner sep=0.75pt]    {$416$};
 % Text Node
 \draw (119.57,341.83) node [anchor=north west][inner sep=0.75pt]    {$3$};
-
-
 \end{tikzpicture}
+\label{fig:other}
+\caption{Variational and Flipout model Architectures}
+\end{figure}
 
-
+For both the Variational and the Flipout models, a $N(x; 0, 1)$ distribution was choosen, since we have no prior information to choose otherwise. While the Fliptout model behaves similarly to the MC dropout the Variational model, is behaving completely at random. This could suggest that something is wrong with the prior set. 
 
 \begin{figure}[]
     \centering
@@ -657,50 +660,62 @@ It is clear in \autoref{fig:mcdrop} (b) that there is a lot more variance in the
     \subfloat[Flipout layers History of epochs]
     {\includegraphics[width=.5\textwidth]{./output/2.c.history-flip.pdf}}
     \caption{History of other Bayesian Models (Flipout and Dense Variational)}
-    \label{fig:histories}
+    \label{fig:other_histories}
 \end{figure}
+
+The Flipout model however, reaches a lower maximum accuracy than the MC dropout model, therefore while it does work as a solution, it is likely not the model of choice. 
+
 
 \subsection{Model Validation}
 \label{sec:validation}
-\blindtext
+In order to choose the best model among the Bayesian approaches the test set is used to calculate the accuracy per class. In \autoref{fig:confmat_base} the base model (non-Bayesian) confusion matrix is presented. We can clearly see that \textit{type 2} and \textit{type 3} are mixed, as we expected from the EDA.
 
 %----------
 \vspace*{1em}
 \begin{figure}[!h]
 \centering
-\includegraphics[width=\textwidth]{./output/2.e.confmat-base.pdf}
-\caption{}
-\label{fig:mcdrop}
+\includegraphics[width=0.6\textwidth]{./output/2.e.confmat-base.pdf}
+\caption{Base Model Confusion matrix}
+\label{fig:confmat_base}
 \end{figure}
 \vspace{2em}
 %----------
 
+In \autoref{fig:confmat_byaesian}, the same confusion matrix for all the Bayesian models are presented. The Variational model is, as seen from the History graph as well, is almost completely random. The Flipout model, is having an exceptional performance in predicting \textit{type 1}, yet it confuses \textit{type 2} with \textit{type 3}. Lastly, the MC dropout model, as predicted from the History plot, is having the best overall performance. 
+
 \begin{figure}[!h]
     \centering
-    \subfloat[Class 1 Explanation]
+    \subfloat[Variational Confusion matrix]
     {\includegraphics[width=.33\textwidth]{./output/2.f.confmat-var.pdf}}
-    \subfloat[Class 2 Explanation]
+    \subfloat[Flipout Confusion matrix]
     {\includegraphics[width=.33\textwidth]{./output/2.g.confmat-flip.pdf}}
-    \subfloat[Class 3 Explanation]
+    \subfloat[MC dropout Confusion matrix]
     {\includegraphics[width=.33\textwidth]{./output/2.h.confmat-mcdrop.pdf}}
-    \caption{}
-    \label{fig:shap_exp}
+    \caption{Confusion matrices for all the Bayesian Models}
+    \label{fig:confmat_byaesian}
 \end{figure}
+
+It is abandontly clear therefore that the model of choice for the specific problem at hand is the MC dropout model as it has the highest accuracy across classes. 
 
 \subsection{Model Explanation}
 \label{sec:explanation}
-\blindtext
+
+In this section a deeper validation of the model is presented. Accuracy is a good enough metric for a lot of tasks, however, when the project at hands needs to be both accurate and interpretable to some extend, further examination of what the model "thinks" when predicting is needed. 
 
 %----------
 \vspace*{1em}
 \begin{figure}[!h]
 \centering
-\includegraphics[width=\textwidth]{./output/2.i.shap-summary.pdf}
-\caption{}
+\includegraphics[width=0.5\textwidth]{./output/2.i.shap-summary.pdf}
+\caption{Shapley Values on a feature by feature level}
 \label{fig:shap_sum}
 \end{figure}
 \vspace{2em}
 %----------
+
+To conduct this analysis, a package called \textsf{SHAP} is used. \textsf{SHAP} stands for \textit{SHapley Additive exPlanation} and is a concept borrowed from Economics. In the Machine Learning field, a Shapley value represents the average marginal contribution of a feature value to the predicted outcome. The next plots are produced on the test set to understand how the algorithm "decides" in a held-out, never seen before dataset. 
+
+In \autoref{fig:shap_sum} we see the following. The top four, most influential variables to the output are \textit{residual.sugar}, \textit{fixed.acidity}, \textit{alcohol}, and \textit{total.sulfur.dioxide}. This seems to be in line with the finding of the much simpler (yet much faster) PCA in the EDA, although the order of the variables is not exaclty the same. More specifically, the mean SHAP value for \textit{residula.sugar} for class zero, is about $0.17$, while the same for class two is around $0.13$ ($0.3 - 0.17$) and even lower for class 1. That means that \textit{residual.sugar} is more important when predicting \textit{type 0}, then \textit{type 2} and lastly \textit{type 1}. The same logic can be extrapolated for \textit{fixed.acidity}, \textit{alcohol}, etc.
 
 \begin{figure}[!h]
     \centering
@@ -710,29 +725,34 @@ It is clear in \autoref{fig:mcdrop} (b) that there is a lot more variance in the
     {\includegraphics[width=.33\textwidth]{./output/2.k.shap-class1.pdf}}
     \subfloat[Class 3 Explanation]
     {\includegraphics[width=.33\textwidth]{./output/2.l.shap-class2.pdf}}
-    \caption{}
+    \caption{Shap values in a value by value level}
     \label{fig:shap_exp}
 \end{figure}
+
+Taking a look into one stage deeper into the decision making process of the algorithm, \autoref{fig:shap_exp} is produced.In \autoref{fig:shap_exp} (a) we see the most influential features in descentind order.
+
+Firstly, in all three graphs, the SHAP values of all the features are centered around zero. That indicated that the distribution of the test dataset 
+Secondly, as explained in \autoref{fig:shap_sum}, \textit{residual.sugar} is the first most important feature in predicting class zero. However, this graph also provides further granularity. In particular, when the \textit{residual.sugar} values are low, this feature has a low impact in classifying the datapoint as class zero, and opositly, when the value \textit{residual.sugar} then the feature has a very high influence in the "decisition" of the algorithm to classify the datapoint as class zero. The same logic can be extended to the other two classes and the other variables.
+
+While this model explanation did not add anything new to the analysis so far, it is regardgles an important step. Understanding why the model predicts in this specific way and not in some other, is vital for the workflow, as it confirms or rejects our prior beliefs. In this specific case, the prior knowledge gained in EDA seems to be confirmed. 
 
 % ------------------------------------------------------------------------------------------------------
 \section{Results}
 \label{sec:results}
-\blindtext
+
+The last important task is to produce a measure of uncertainty. This will help to automatically identify datapoints that are anomalous. The assumption is that if the Neural Network is uncertain as to how to classify a specific wine, then that wine needs human judgment to be classified correctly.
+In order to produce a measure of uncertainty, firstly we need to sample from the posterior distribution. This is being done by drawing $n=1000$ predictions from the test set. In essense, the test set is being passed through the MC dropout neural network $1000$ times, generating a different probability for each class in each pass. Then, the average per class is calculated for the $1000$ predictions on each row of the dataset. These are the average probabilities for each class generated by the Bayesian neural network. 
+
+In the rest of \autoref{sec:results} three candidate measures will be presented.
 
 \subsection{Standard Deviation}
-\blindtext
+Since 
 
 \subsection{Confidence Intervals}
 \blindtext
 
 \subsection{Entropy}
-\begin{figure}[!ht]
-\centering
-\includegraphics[width=8cm]{scenTree.png}
-\caption{Look at this scenario tree with funny times $t_{1}$ and scenarios $s_{1}$ etc.}
-\label{fig:scenarioTree}
-\end{figure}
-
+\blindtext
 \cleardoublepage
 
 % ------------------------------------------------------------------------------------------------------
@@ -740,24 +760,24 @@ It is clear in \autoref{fig:mcdrop} (b) that there is a lot more variance in the
 \blindtext
 \clearpage
 
-% ------------------------------------------------------------------------------------------------------
-%tliterature.bib
-\bibliography{literature}
-\clearpage
+% % ------------------------------------------------------------------------------------------------------
+% tliterature.bib
+% \bibliography{literature}
+% \clearpage
 
-% ------------------------------------------------------------------------------------------------------
-\appendix
-\section*{Appendices}
-\addcontentsline{toc}{section}{Appendices}
-\blindtext
+% % ------------------------------------------------------------------------------------------------------
+% \appendix
+% \section*{Appendices}
+% \addcontentsline{toc}{section}{Appendices}
+% \blindtext
 
-\section{Appendix first topic}
-\label{app:one}
-\blindtext
+% \section{Appendix first topic}
+% \label{app:one}
+% \blindtext
 
-\section{Appendix second topic}
-\label{app:one}
-\blindtext
-\clearpage
+% \section{Appendix second topic}
+% \label{app:one}
+% \blindtext
+% \clearpage
 
 \end{document}
