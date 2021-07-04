@@ -74,6 +74,14 @@ In this project a way of capturing anomalies on a dataset using Bayesian Neural 
 \clearpage
 
 \begin{center}
+\Large{Acknowledgements}
+\end{center}
+
+To Sotiria, who was by my side.
+
+\clearpage
+
+\begin{center}
 \Large{University of Edinburgh – Own Work Declaration}
 \end{center}
 
@@ -134,24 +142,25 @@ Date \dottedline{8cm}
 \setcounter{page}{1}
 
 \nocite{*}
-\bibliographystyle{abbrv}
 \clearpage
 
 % ------------------------------------------------------------------------------------------------------
 \section{Introduction}
 \subsection{Motivation}
 \label{sec:motivation}
-Anomaly detection is a beneficial technique leveraged (among others) by the banking sector in order to block fraudulent transactions automatically. This dissertation project explains how an anomaly detection system could be implemented using Bayesian neural networks. This application uses machine learning to train a model on a set of data to predict an outcome of interest. Afterwards, the predictions are drawn many times (bootstrapped) to estimate confidence about the prediction. The project aims to automatically flag transactions that could be fraudulent, thus allowing a human to spend time in a deep investigation of those transactions, rather than manually going through each transaction one by one.
-This report is divided into the \textit{Introduction}, \textit{Exploratory Data Analysis}, \textit{Methods}, and \textit{Results} sections and a brief summary of each one is presented here. The rest of the \textit{Introduction} section will explain the specific dataset used for the presentation of the problem, as well as all the software requirements to be able to reproduce the results. Next, the \textit{Exploratory Data Analysis} section presents various aspects of the data, such as the distributions of the features, their correlations as well as a quick way to discover potential anomalies visually. On the \textit{Methods} section, the specific architecture of all the neural networks models are presented, as well as the way the best model was selected (model validation). Finally, three related but different metrics are presented in the \textit{Results} sectfion of what constitutes an anomaly, yet the specific threshold for those metrics is arbitrarily set. In a real-life application, this is a business decision the stakeholders should set according to their criteria.
+Anomaly detection is a beneficial technique leveraged among others by the military,  for cybersecurity reasons, and others \cite{military}, \cite{cyber}, \cite{traffic}. Specifically in the banking sector, it is used to block fraudulent transactions automatically. This dissertation project explains how an anomaly detection system could be implemented using Bayesian neural networks. This application uses machine learning to train a model on a set of data to predict an outcome of interest. Afterwards, the predictions are drawn multiple times (bootstrapped) to estimate confidence about the prediction. The project aims to automatically flag transactions that could be fraudulent, thus allowing a human to spend time in a deep investigation of those transactions, rather than manually going through each transaction one by one.
+
+This report is divided into the \textit{Introduction}, \textit{Exploratory Data Analysis}, \textit{Methods}, and \textit{Results} sections and a brief summary of each one is presented here. The rest of the \textit{Introduction} section will explain the specific dataset used for the presentation of the problem, as well as all the software requirements to be able to reproduce the results. Next, the \textit{Exploratory Data Analysis} section presents various aspects of the data, such as the distributions of the features, their correlations as well as a quick way to discover potential anomalies visually. On the \textit{Methods} section, the specific architecture of all the neural networks models are presented, as well as the way the best model was selected (model validation). Finally, three related but different metrics are presented in the \textit{Results} section of what constitutes an anomaly, yet the specific threshold for those metrics is arbitrarily set. In a real-life application, this is a business decision the stakeholders should set according to their criteria.
 \subsection{Data Sources}
 \label{sec:back}
 The dataset used in this project was given by the University of Edinburgh in the context of the dissertation project, and it is the wine dataset. It is an especially clean and very well-known real-life dataset for prototype creation. The basic assumption is that if the algorithm manages to capture anomalies on this dataset, it is in principal possible to productionise a variant of the architecture for an application of interest. More specifically, it is a 4898 (rows) $\times$ 12 (columns) matrix, with no missing values and no duplicated rows. Each row represents one wine, and the columns are the various features of each wine, such as its degrees of \textit{alcohol}, the \textit{acidity} of the wine, the \textit{pH} level, which measures how acidic or basic the solution etc. The problem this dissertation is going to try to solve is a classification problem, of the \textit{type} of the wine, according to all other features. The variable \textit{type} is either \textit{1, 2, or 3} and the classes are almost perfectly balanced, thus making easier the preprocessing stage of the problem and focusing more on the architecture and the interpretation of the algorithm as well as its results. Thus, the only preprocessing steps needed are the centring and scaling of the data matrix to ensure that variables can potentially have the same impact regardless of the scale they are measured in, and one-hot encoding the \textit{quality} feature, since it is also not a numeric variable, but a factor one. Lastly, the dataset is split into train ($80\%$), validation ($25\%$) and test ($25\%$) sets to ensure that no algorithm overfits the given dataset.
 \subsection{Software}
 \label{sec:software}
-A combination of the programming languages \textsf{R} and \textsf{Python} are used to produce this report. The use of both languages is in no way binding. \textsf{R} is used for the exploration of the dataset, as well as for the dimensionality reduction plots, while \textsf{Python} is used in combination with \textsf{tensorflow},\textsf{tensorflow-probability}, and \textsf{keras} to build, validate, and test the neural networks. These packages can also be used from the \textsf{R} ecosystem, yet the setup process is more complicated and thus avoided. The reason \textsf{R} is selected for the EDA is due to the \textsf{ggplot2} package, which is a very powerful and easy package for creating complicated plots.
+A combination of the programming languages \textsf{R} and \textsf{Python} are used to produce this report. The use of both languages is in no way binding. \textsf{R} is used for the exploration of the dataset, as well as for the dimensionality reduction plots, while \textsf{Python} is used in combination with \textsf{tensorflow},\textsf{tensorflow-probability}, and \textsf{keras} to build, validate, and test the neural networks. These packages can also be used from the \textsf{R} ecosystem, yet the setup process is more complicated and thus avoided. The reason \textsf{R} is selected for the EDA is due to the \textsf{ggplot2} package, which is a very powerful and easy package for creating complicated plots. 
 \clearpage
 %------------------------------------------------------------------------------------------------------
 \section{Exploratory Data Analysis}
+\label{sec:eda}
 In this section, a basic overview of the dataset and its properties is going to be presented. Firstly, various statistics regarding the dataset are shown in the form of graphs in univariate, bivariate and multivariate analysis. Afterwards, the dataset is reduced in dimensions with two techniques (a linear and a non-linear) in order to be able to plot it with a two-dimensional graph. This is also a quick way to identify potential anomalies as well visually. The reason for the extended EDA is to understand what preprocessing steps could be needed in order for future models to work correctly. Also, the knowledge gained from this exploration of the dataset will help in the explanation of the model in the \textit{Model Validation} section.
 \subsection{Univariate Analysis}
 \label{sec:univariate}
@@ -186,10 +195,10 @@ For example, \autoref{fig:corr} (a) shows a strong positive relationship between
 In general, we identify two clusters. One with strong correlations containing \textit{type}, \textit{residual.sugar}, \textit{density}, \textit{alcohol}, \textit{total.sulfure.dioxide} and \textit{free.sulfure.dioxide}, and a second one with low correlations containing \textit{fixed.acidity}, \textit{pH}, \textit{citric.acid}, \textit{sulphates} and \textit{volatile.acidity}. The model is going to leverage these relationships in order to predict the outcome.
 \subsection{Dimensionality Reduction}
 \label{sec:reduction}
-In exploring the dataset, two different techniques were used to reduce the dimensions and visualise them with plots. The first method is the Principal Component Analysis (PCA), which is a singular value decomposition (SVD) of the centred data matrix. The SVD of an $ m \times n $ matrix $A$ is the factorization of the matrix into $USV^\top$. Secondly, a more advanced non-linear dimensionality reduction method, called t-distributed Stochastic Neighbor Embedding (t-SNE), was tried to cross evaluate the results of PCA. This method works by finding a way to project the high dimensional data into a lower dimension while preserving the clustering of the higher dimension.
+In exploring the dataset, two different techniques were used to reduce the dimensions and visualise them with plots. The first method is the Principal Component Analysis (PCA), which is a singular value decomposition (SVD) of the centred data matrix. The SVD of an $ m \times n $ matrix $A$ is the factorization of the matrix into $USV^\top$ \cite{dme}. Secondly, a more advanced non-linear dimensionality reduction method, called t-distributed Stochastic Neighbor Embedding (t-SNE), was tried to cross evaluate the results of PCA. This method works by finding a way to project the high dimensional data into a lower dimension while preserving the clustering of the higher dimension.
 \subsubsection{PCA}
 \label{sec:pca}
-Using the singular value decomposition to factorise the data matrix $X$, we produce three matrixes, $U$, $S$ and $V$, each carrying information about the dataset in some aspect. First of all, we can create the following graph of the percentage of variance explained by each principal component.
+Using the singular value decomposition to factorise the data matrix $X$, we produce three matrixes, $U$, $S$ and $V$, each carrying information about the dataset in some aspect. First of all, we can create the following graph of the percentage of variance explained by each principal component \cite{dme}.
 %----------
 \vspace*{1em}
 \begin{figure}[!h]
@@ -212,7 +221,7 @@ The principal components are a linear combination of all the dataset columns, an
 \label{fig:pca_f}
 \vspace{2em}
 %----------
-In \autoref{pca_f} the first four principal components are visualised along with the loadings of each column. By on the two most extreme positive and negative values of the loadings, we can interpret the components into new kinds of variables.
+In \autoref{fig:pca_f} the first four principal components are visualised along with the loadings of each column. By on the two most extreme positive and negative values of the loadings, we can interpret the components into new kinds of variables.
 \begin{itemize}
 \item PC1: Alcohol vs Sulfur Dioxide (free and total)
 \item PC2: Free Sulfur Dioxide vs Total Sulfur Dioxide
@@ -220,7 +229,7 @@ In \autoref{pca_f} the first four principal components are visualised along with
 \item PC4: Alcohol vs Acidity
 \end{itemize}
 It is clear that this dimensionality reduction technique produces results that reflect the real world. Sulfur Dioxide is a vital component in winemaking as it regulates bacteria growth among other essential tasks, yet it also gives unpleasant odours and tastes to the wine. PCA immediately captures that reality by assigning the two most significant negative loadings on sulfur dioxide concentration (both free and total) to the first principal component. In addition to that, the second most important component in order to classify the wines is the origin of that Sulfur Dioxide. The total Sulfur Dioxide is the Free Sulfur Dioxide plus Sulfur Dioxide bound to other ingredients such as sugars etc. After investigating how much SO2 a wine has and where it comes from (free vs total), the next most important factors have to do with the specific taste of the wine, mainly how sweet and how acidic the taste the wine has.
-We can now visualise the first two principal components on a plot while also colouring the datapoint according to their \textit{type}, the target variable.
+We can now visualise the first two principal components on a plot while also colouring the datapoint according to their \textsf{type}, the target variable.
 %----------
 \vspace*{1em}
 \begin{figure}[!h]
@@ -231,11 +240,11 @@ We can now visualise the first two principal components on a plot while also col
 \end{figure}
 \vspace{2em}
 %----------
-It is immediately clear by \autoref{fig:pca_biplot} that \textit{type} classes two and three, have an extensive overlap in this graph. That is useful information in the model evaluation, as we expect the model to "find it difficult" to distinguish a wine of type two from a wine of type three while simultaneously having better accuracy in predicting class one. However, there a second major takeaway from \textit{Figure 3}, and that is the existence of potential anomalies. While the majority of the points are centred around $(0,0)$, some points are geometrically far away from the others of the same class.
+It is immediately clear by \autoref{fig:pca_biplot} that \textsf{type} classes two and three, have an extensive overlap in this graph. That is useful information in the model evaluation, as we expect the model to "find it difficult" to distinguish a wine of type two from a wine of type three while simultaneously having better accuracy in predicting class one. However, there a second major takeaway from \textit{Figure 3}, and that is the existence of potential anomalies. While the majority of the points are centred around $(0,0)$, some points are geometrically far away from the others of the same class.
 \subsubsection{t-SNE}
 \label{sec:tsne}
-Principal Component Analysis through singular value decomposition produced significant findings and deepened our understanding of the dataset. However, it was clear by \textit{Figure 3} that it could not create a clear enough separation between the classes. This could be because of the nature of the dataset, or it means that PCA is too simple to capture the complexity of the dataset due to its linear nature.
-Therefore, a second, non-linear technique was tried in order to produce the corresponding figure as \textit{Figure 3}. This technique calculates the distances from each point to each neighbour and imposes a t-distribution on those values. It is an iterative algorithm that many times produces very good clustering. However, in \autoref{fig:sne_biplot}, it is clear that \textit{type} classes two and three are still clustered together, while class one is separated.
+Principal Component Analysis through singular value decomposition produced significant findings and deepened our understanding of the dataset. However, it was clear by \autoref{fig:pca_biplot} that it could not create a clear enough separation between the classes. This could be because of the nature of the dataset, or it means that PCA is too simple to capture the complexity of the dataset due to its linear nature.
+Therefore, a second, non-linear \cite{van2008visualizing} technique was tried in order to produce the corresponding figure as \autoref{fig:sne_biplot}. This technique calculates the distances from each point to each neighbour and imposes a t-distribution on those values. It is an iterative algorithm that many times produces very good clustering. However, in \autoref{fig:sne_biplot}, it is clear that \textit{type} classes two and three are still clustered together, while class one is separated.
 The main takeaway from this analysis is that the dataset, although clean and straightforward to understand, is more complicated than it looks. This suggests that a simple model such as logistic regression might not be the model of choice. Instead, neural networks are a good candidate for such tasks due to their flexible nature.
 %----------
 \vspace*{1em}
@@ -264,7 +273,7 @@ In all four subplots of \autoref{fig:multi} we identify the same exact behaviour
 % ------------------------------------------------------------------------------------------------------
 \section{Models}
 \label{sec:methods}
-In this section, the methods used to create the model will be discussed. This includes the baseline model that is deterministic in nature, as well as the various Bayesian approaches. Firstly, the reason to choose neural networks as the model of choice is due to the complexity of the research question, in combination with the complexity of the dataset as demonstrated from the exploratory data analysis. Secondly, the Bayesian approach is essential to make the neural network prediction \textit{stochastic}.
+In this section, the methods used to create the model will be discussed. This includes the baseline model that is deterministic in nature \cite{mlpr}, as well as the various Bayesian approaches. Firstly, the reason to choose neural networks as the model of choice is due to the complexity of the research question, in combination with the complexity of the dataset as demonstrated from the exploratory data analysis. Secondly, the Bayesian approach is essential to make the neural network prediction \textit{stochastic} \cite{tran2018bayesian}.
 In order to train the model and produce both high accuracy on the training and validation sets, as well as generalize well on the test set, a series of actions had to be taken. Firstly, a set of hyperparameters had been set for all models. Those hyperparameters are:
 \begin{itemize}
 \item The Learning Rate - ranging from $1e-1$ to $1e-8$
@@ -281,11 +290,11 @@ The optimization process, was a \textsf{RandomSearch} algorithm, implemented wit
 \begin{equation}
 \text{Loss} = \sum_{i=1}^{3} y_{true}^{(i)} \log{\frac{1}{y_{pred}^{(i)}}} = -\sum_{i=1}^{3} y_{true}^{(i)} \log y_{pred}^{(i)}
 \end{equation}
-Lastly, the models are trained for $2000$ training epochs. After a certain number of epochs, it started to overfit. Early stopping was implemented in the model with the patience of $200$ epochs to avoid this pitfall. That means that if the validation accuracy drops for $200$ epochs, the model assumes that it overfitted and stops trying to minimise the loss function further. This is why the x-axis varies in every Figure (\autoref{fig:base}, \autoref{fig:histories}, \autoref{fig:mcdrop}) where the history of accuracy per epoch is plotted.
+Lastly, the models are trained for $2000$ training epochs. After a certain number of epochs, it started to overfit. Early stopping was implemented in the model with the patience of $200$ epochs to avoid this pitfall. That means that if the validation accuracy drops for $200$ epochs, the model assumes that it overfitted and stops trying to minimise the loss function further. This is why the x-axis varies in every Figure (8, 9, 11) where the history of accuracy per epoch is plotted.
 After the successful training of the base neural network, the predictions are deterministic. That means that each time a specific input is passed through the NN, the same output is produced. While this can be useful in particular applications, the goal of this project is to find a metric for the \textit{uncertainty} of the predictions. This is impossible to do with a deterministic process as samples cannot be drawn from the posterior distribution to estimate it. Therefore, after establishing a baseline to prove that the problem can be solved with good enough accuracy, the network can become Bayesian by changing some of its layers to Bayesian layers. Afterwards, we can sample from the posterior distribution of the predictions by predicting $n$ times the same input, in our case, the test set. Then by storing each predicted probability (one for each class) in each draw ($1 \dots n$), we can compute average predictions, variances, confidence intervals, and more metrics discussed in \autoref{sec:results}.
 \subsection{Base Neural Network}
 \label{sec:NN}
-Before tackling the Bayesian Neural Network, a deterministic baseline should be first implemented. The model is built using the \textsf{keras} package for \textsf{Python}. The architecture that produced the best results is one with two hidden layers of $416$ and $160$ neurons, respectively, densely connected. This produces a total number of parameters to be estimated at $75,107$. The neural network is architecture depicted in \autoref{fig:base} (a).
+Before tackling the Bayesian Neural Network, a deterministic baseline should be first implemented. The model is built using the \textsf{keras} package for \textsf{Python}. The architecture that produced the best results is one with two hidden layers of $416$ and $160$ neurons, respectively, densely connected. This produces a total number of parameters to be estimated at $75,107$. The neural network is architecture depicted in Figure 8 (a).
 \vspace*{1.5em}
 \begin{figure}
 \resizebox{.5\textwidth}{!}{%
@@ -339,14 +348,16 @@ Dense
 }%
 \subfloat[Base model History of epochs]
 {\includegraphics[width=.5\textwidth]{./output/2.a.history-base.pdf}}
-\label{fig:base}
 \caption{Baseline Architecture and Epoch History}
+\label{fig:base}
 \end{figure}
-\autoref{fig:base} (b) is a typical history of the training accuracy increasing over each epoch. Typicaly it stops before iteration $1000$ and the best accuracy of the model is close to $90\%$. This is a very good accuracy, since as we have seen at the exploratory data analysis, \textit{type 2} and \textit{type 3} are very difficult to distinguish.
+Figure 8 (b) is a typical history of the training accuracy increasing over each epoch. Typicaly it stops before iteration $1000$ and the best accuracy of the model is close to $90\%$. This is a very good accuracy, since as we have seen at the exploratory data analysis, \textit{type 2} and \textit{type 3} are very difficult to distinguish.
 With the baseline model explained and trained, we gained an understanding of the extent to which the problem can be solved with neural networks. Arguably, an accuracy score of $90\%$ does not mean anything in a vacuum. For example, $90\%$ accuracy in predicting a particular disease in a patient might be too low. In contrast, the same accuracy on an application less sensitive to critical decision making might be excellent. However, this could be a good final score for the model in the specific task at question (classifying types of wines).
+
 \subsection{Monte Carlo Dropout}
 \label{sec:BNN}
-Adding some Monte Carlo Dropout layers in the middle of each Dense layer is the first approach in turning the base model into a Bayesian one. Simple dropout layers work during the training of the neural network by randomly ignoring or "dropping out" a percentage of neurons along with the backward and forward connections. This is being handled by random draws of a Bernoulli distribution with the "success" probability defined by the user. That process still generates a \textit{deterministic} prediction since at test time, which neurons are online is already decided. Monte Carlo dropout is a wrapper of the simple dropout function that preserves the dropout at testing time. That way, the same prediction passed through the network twice will produce different predictions according to which neurons and connections are online. Finally, these predictions are interpreted as random draws from the posterior distribution.
+Adding some Monte Carlo Dropout layers in the middle of each Dense layer is the first approach in turning the base model into a Bayesian one. This method is traditionaly used by the literature for data generation purposes in fields where data collection is costly or / and difficult \cite{miok2019generating}. Simple dropout layers work during the training of the neural network by randomly ignoring or "dropping out" a percentage of neurons along with the backward and forward connections. This is being handled by random draws of a Bernoulli distribution with the "success" probability defined by the user. That process still generates a \textit{deterministic} prediction since at test time, which neurons are online is already decided. Monte Carlo dropout is a wrapper of the simple dropout function that preserves the dropout at testing time. That way, the same prediction passed through the network twice will produce different predictions according to which neurons and connections are online. Finally, these predictions are interpreted as random draws from the posterior distribution.
+
 \vspace*{1.5em}
 \begin{figure}
 \resizebox{.5\textwidth}{!}{%
@@ -423,13 +434,13 @@ MC\\Drop
 }%
 \subfloat[Monte Carlo Dropout History of epochs]
 {\includegraphics[width=.5\textwidth]{./output/2.d.history-mcdrop.pdf}}
-\label{fig:mcdrop}
 \caption{Monte Carlo Dropout Architecture and Epoch History}
+\label{fig:mcdrop}
 \end{figure}
-It is evident in \autoref{fig:mcdrop} (b) that there is a lot more variance in the prediction from epoch to epoch due to the random nature of the dropout layers. An important finding in this approach is that the validation and the training accuracy are almost in all epochs at the same level. Contrary to the base model, where the validation accuracy increases at a slower rate than the training accuracy, this does not happen when the Monte Carlo Dropout layers are added to the model. It can even maintain for a short duration a higher validation accuracy than training accuracy, as seen from epochs $200$ to $400$ in \autoref{fig:mcdrop} (b) due to random chance.
+It is evident in Figure 9 (b) that there is a lot more variance in the prediction from epoch to epoch due to the random nature of the dropout layers. An important finding in this approach is that the validation and the training accuracy are almost in all epochs at the same level. Contrary to the base model, where the validation accuracy increases at a slower rate than the training accuracy, this does not happen when the Monte Carlo Dropout layers are added to the model. It can even maintain for a short duration a higher validation accuracy than training accuracy, as seen from epochs $200$ to $400$ in \autoref{fig:mcdrop} (b) due to random chance.
 \subsection{Other Bayesian Approaches}
 \label{sec:other}
-In addition to the Monte Carlo Dropout model, various other approaches have been tried. Their results on training were not as good as the MC dropout model; hence they are presented in this section, and their specific architecture is in \autoref{fig:other}. A more robust way of validating the models is presented in \autoref{sec:results}.
+In addition to the Monte Carlo Dropout model, various other approaches have been tried. Their results on training were not as good as the MC dropout model; hence they are presented in this section, and their specific architecture is in Figure 10. A more robust way of validating the models is presented in \autoref{sec:results}.
 \begin{figure}
 \centering
 \resizebox{.8\textwidth}{!}{%
@@ -592,8 +603,8 @@ In addition to the Monte Carlo Dropout model, various other approaches have been
 % Text Node
 \draw (119.57,341.83) node [anchor=north west][inner sep=0.75pt] {$3$};
 \end{tikzpicture}}
-\label{fig:other}
 \caption{Variational and Flipout model Architectures}
+\label{fig:other}
 \end{figure}
 For both the Variational and the Flipout models, a $N(x; 0, 1)$ distribution was choosen, since we have no prior information to choose otherwise. While the Fliptout model behaves similarly to the MC dropout the Variational model, is behaving completely at random. This could suggest that something is wrong with the prior set.
 \begin{figure}[]
@@ -701,8 +712,8 @@ ID  & \multicolumn{1}{c}{pred 1}   & \multicolumn{1}{c}{pred 2}   & \multicolumn
 866 & 0.999868                     & 0.000069                     & 0.000036                   & 2          & 0.000274 \\
 878 & 0.999894                     & 0.000057                     & 0.000075                   & 2          & 0.000265 \\ \hline
 \end{tabular}
-\label{tab:CI}
 \caption{Top five smallest and largest CI ragnes for \textsf{type 2}}
+\label{tab:CI}
 \end{table}
 
 This approach has various caveats. First of all, the probabilities produces by the algorithm for each type, are not exactly probabilities. They are generated by passing the final output of the neural network through a softmax function. While this function does produce an output between zero and one, this on its own does not mean that these are probabilities. Hence, by calculating the standard deviation and producing the confidence intervals it is possible to find an upper bound for the probability that is bigger than one or a lower bound that is less than zero. Both of this cases do not make sense, and this is happening exactly because we interpret as probability something that is not. Nevertheless, a closer look at the output of this metric can be presented. 
@@ -710,7 +721,7 @@ This approach has various caveats. First of all, the probabilities produces by t
 In \autoref{tab:CI} we see the biggest and smallest confidence interval ranges for the predictions of \textsf{type 2}. This was choosen as it was abandontly clear from the EDA and the confusion matrices that the algorith find particularly difficult to identify this type of wines. In the first five examples, the confidence interval is the largest possible, implying that the algorithm is uncertain about the type of those specific datapoints being \textsf{type 2}. In this example this turns out to be correct as no observation is of true label 2. In contrast, the second five examples, the algorithm predicts with high probability that the observation is of \textsf{type 1} and assigning almost zero probability of it being \textsf{type 2}. While the majority of the true labels are of \textsf{type 2}, the results are not interpretable, hinting that a different measure should be explored.
 
 \subsection{Entropy}
-A more robust measure of uncertainty, is the informational \textbf{entropy} or Shannon entropy. A random variable $X$ with a PMF $p$, has entropy $H(X)$ and it is a measure of it's uncertainty. Entropy is defined as:
+A more robust measure of uncertainty, is the informational \textbf{entropy} or Shannon entropy \cite{shannon}. A random variable $X$ with a PMF $p$, has entropy $H(X)$ and it is a measure of it's uncertainty. Entropy is defined as:
 
 \begin{equation}
 H(X) = - \sum_{k=1}^K p(X=k) \log_2p(X=k)
@@ -740,8 +751,8 @@ ID  & pred 1                       & pred 2                       & pred 3    & 
 831 & \multicolumn{1}{r}{0.999153} & 0.000453                     & 0.000394  & 0.010710 \\
 749 & 0.999103                     & \multicolumn{1}{r}{0.000341} & 0.000556  & 0.011229 \\ \hline
 \end{tabular}}
-\label{tab:entropy}
 \caption{Top five most and least anomalous datapoints by Entropy}
+\label{tab:entropy}
 \end{table}
 
 Indeed in \textit{Table 2} we see this relationship. The top five most uncertain predictions, as classified by Entropy, are the ones that are almost random. On the contrary, the least uncertain predictions, are the ones that are predicted with highest probability. This all happen to be of \textsf{type 1}, because we know that the algorithm misclassifies \textsf{type 1} far fewer times than the other classes. This doesn't mean that the low entropy predictions are correct while the low entropy are incorrect. Entropy is just a way to summarize, the average probabilities produced for each class in a single value. By setting a threshold $t$ on that number, then we can easily create a binary measure of uncertainty. The level of that threshold represents the tolerance the stakeholder has on anomalies and it is a business desition.
@@ -768,8 +779,9 @@ Lastly, the uncertainty measure of Entropy seems to work well enough for the spe
 \clearpage
 
 % % ------------------------------------------------------------------------------------------------------
-% literature.bib
-\bibliography{literature}
+% literature.bib abbrv
+\bibliographystyle{abbrv}
+\bibliography{literature.bib}
 \clearpage
 
 % % ------------------------------------------------------------------------------------------------------
