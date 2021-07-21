@@ -13,10 +13,12 @@ library(tidyverse) # for tidy syntax
 library(janitor) # for handling column names
 library(data.table) # for fast processing of data
 library (skimr) # to get a fast grasp of the dataset
-library(broom)
+library(broom) 
 library(tidytext)
-library(patchwork)
+library(patchwork) 
 library(corrplot)
+library(caret)
+library(mice)
 ```
 
 # Load the data files
@@ -38,11 +40,15 @@ experiment <-
     "./data/CW_kallisto_abundance_fold_change_long_by_gene.csv"
   )) %>% clean_names()
 ```
+
 # Missing Data Handling
 
 ```{r help-missing}
 handle.missing.data <- function(df) {
-  df <- df %>% na.omit() %>% filter(fold_change != Inf)
+  df <- df %>%
+    mutate(fold_change = case_when(est_counts + tpm == 0 ~ 0,
+                                   TRUE ~ fold_change)) %>% 
+    mutate(fold_change = na_if(fold_change, Inf))
   return(df)
 }
 ```
@@ -52,9 +58,9 @@ experiment <- experiment %>% handle.missing.data()
 ```
 
 ```{r load-check}
-keys %>% head()
-genes %>% head()
-experiment %>% head()
+keys %>% head() 
+genes %>% head() 
+experiment %>% head() 
 ```
 
 # Joining Datasets
@@ -69,9 +75,19 @@ df <- exp %>%
   left_join(genes, by = "gene") %>%
   mutate(row_name = paste(gene, medium, temp, time, rep, sep="-"), .before=gene) %>%
   remove_rownames %>%
-  column_to_rownames("row_name") %>% as.data.table()
-df %>% head()
+  column_to_rownames("row_name") %>% as.data.frame()
+df %>% head() 
+```
 
+```{r model-data}
+dmy <- dummyVars("~ medium + temp + time + rep ", data = df)
+df.model <- data.frame(predict(dmy, newdata = df))
+df.model <- cbind(df.model, df) %>%
+  select(-medium, -temp, -time, -rep, -gene) %>% 
+  clean_names() %>% 
+  relocate(c(est_counts, tpm, fold_change), .before=medium_rpmi)
+
+df.model %>% head() 
 ```
 
 # Univariate Analysis
@@ -119,48 +135,39 @@ plots <- map(names, ~ plot.univariate(.x))
 plots[[1]] + plots[[2]] + plots[[3]]
 ```
 
-
-Let's take tpm as the y variable.
+Let's take fold_change as the y variable.
 
 ```{r densities}
-df %>% select(gene, medium, temp, time, rep, tpm) %>%
-  ggplot(aes(x = tpm, col = medium, fill = medium), show.legend = FALSE) +
+df %>% select(gene, medium, temp, time, rep, fold_change) %>%
+  ggplot(aes(x = fold_change, col = medium, fill = medium), show.legend = FALSE) +
   geom_density(alpha = 0.8) +
   theme(axis.title.x = element_blank(),
         axis.title.y = element_blank()) +
   ggtitle("TPM") +
   facet_grid(medium ~ .) +
-  xlim(0, 100) +
+  xlim(0, 10) +
   theme_minimal() +
   theme(legend.position = "none")
 ```
 
+# PCA on full data
 
-```{r time-series}
-exp %>%
-  filter(gene %in% c("CNAG_00121", "CNAG_06917"), rep == "A", temp != "30C") %>%
-  select(-est_counts, -fold_change, -rep) %>%
-  ggplot(aes(x = time, y = tpm)) +
-  geom_line(aes(col = gene)) +
-  geom_point(aes(col = gene)) +
-  facet_wrap( ~ medium + temp)
-```
+## Centerint tha data matrix
 
 ```{r centering}
-df.sample <- df %>% sample_n(size=1e3, replace=FALSE)
+df.exp <- df.model
+df.sample <- df.exp %>% sample_n(size=nrow(df.exp)/2, replace=FALSE) %>% filter(fold_change<5)
 
 df.X <- df.sample %>% select(-est_counts, -tpm, -fold_change)
-df.y <- df.sample %>% select(tpm)
+df.y <- df.sample %>% select(fold_change)
 
 df.cntr.X <- select_if(df.X, is.numeric) %>% 
   scale(center = TRUE, scale = TRUE) %>% 
   as.data.table()
-df.cntr.X %>% head()
+df.cntr.X %>% head() 
 
 svd.results <- svd(df.cntr.X)
 ```
-
-# PCA
 
 ## Variance explained by PC score
 
@@ -171,10 +178,11 @@ svd.var.exp <- tidy(svd.results, matrix = "d")
 svd.var.exp %>% ggplot(aes(x = PC, cumulative)) +
   geom_line() +
   # scale_x_continuous(breaks = seq(min(svd.var.exp$PC),max(svd.var.exp$PC),by=1)) +
-  coord_cartesian(xlim = c(1, 200)) +
+  # coord_cartesian(xlim = c(1, 200)) +
   labs(title = "Variance Explained by PCs") +
   theme_minimal()
 ```
+
 ## Column wise interpretation of PCA loadings
 
 ```{r col-expl}
@@ -238,16 +246,135 @@ df.pcs %>%
   ggplot(aes(
     x = PC1,
     y = PC2,
-    col = tpm,
-    fill = tpm
+    col = fold_change,
+    fill = fold_change
   )) +
-  geom_point(shape = 21, col = "black") +
-  labs(title = "PC1 vs PC2", fill = "TPM") +
+  geom_jitter(shape = 21, col = "black") +
+  labs(title = "PC1 vs PC2", fill = "fold_change") +
   theme_minimal()
 ```
+
+# PCA on experiment data
+
+## Centerint tha data matrix
+
+```{r centering-2}
+df.exp <- df.model 
+df.sample <- df.exp %>% sample_n(size=nrow(df.exp)/2, replace=FALSE) %>% filter(fold_change<5) %>% select(1:10)
+
+df.X <- df.sample %>% select(-est_counts, -tpm, -fold_change)
+df.y <- df.sample %>% select(fold_change)
+
+df.cntr.X <- select_if(df.X, is.numeric) %>% 
+  scale(center = TRUE, scale = TRUE) %>% 
+  as.data.table()
+df.cntr.X %>% head() 
+
+svd.results <- svd(df.cntr.X)
+```
+
+## Variance explained by PC score
+
+```{r var-expl-2}
+# interpret variance explained 
+svd.var.exp <- tidy(svd.results, matrix = "d")
+
+svd.var.exp %>% ggplot(aes(x = PC, cumulative)) +
+  geom_line() +
+  # scale_x_continuous(breaks = seq(min(svd.var.exp$PC),max(svd.var.exp$PC),by=1)) +
+  # coord_cartesian(xlim = c(1, 200)) +
+  labs(title = "Variance Explained by PCs") +
+  theme_minimal()
+```
+
+## Column wise interpretation of PCA loadings
+
+```{r col-expl-2}
+# interpret loadings - working on columns
+svd.loadings <- tidy(svd.results, matrix="v") %>%
+                mutate(element = colnames(df.cntr.X)[column])
+
+svd.loadings %>% filter(PC<=4) %>%
+  group_by(PC) %>%
+  top_n(10, abs(value)) %>%
+  ungroup() %>%
+  mutate(element = reorder_within(element, value, PC)) %>%
+  ggplot(aes(x=element, y=value, fill=factor(PC))) +
+  geom_col(show.legend = FALSE) +
+  facet_wrap(~PC, scales="free") +
+  scale_x_reordered() + 
+  coord_flip() +
+  labs(title = "First four PCs of feautures") + 
+  theme_minimal()
+```
+
+# Outlier examples
+
+```{r outlier-identifier}
+df.full <- df %>%
+  select(gene, medium, temp, time, rep, fold_change) %>%
+  filter(rep=="A") %>% 
+  select(-rep) %>% 
+  group_by(gene, medium, temp) %>%
+  filter(time %in% c(10, 120)) %>%
+  ungroup()
+
+df10 <- df.full %>% filter(time==10)
+df120 <- df.full %>% filter(time==120)
+
+df.format <- df10 %>%
+  left_join(df120, by=c("gene", "medium", "temp")) %>%
+  mutate(fold_change.10=fold_change.x, .before=fold_change.x) %>%
+  mutate(fold_change.120=fold_change.y, .before=fold_change.y) %>%
+  select(-time.y, -time.x, -fold_change.x, -fold_change.y) 
+
+extreme.cases <- df.format %>% 
+  group_by(gene, medium, temp) %>% 
+  mutate(fold_change_diff = fold_change.120 - fold_change.10) %>% 
+  arrange(-fold_change_diff) %>% 
+  ungroup() %>%
+  filter(row_number() > max(row_number()) - 5 | row_number() <= 5)
+
+cases <- extreme.cases %>% select(gene) %>% as.matrix()
+```
+
+```{r time-series}
+piazza <- c("CNAG_00121", "CNAG_06917")
+pca.example <- c("CNAG_01842", "CNAG_03788")
+
+big <- exp %>%
+  filter(gene %in% cases[1:5], rep == "A", temp != "30C") %>%
+  select(-est_counts, -tpm, -rep) %>%
+  ggplot(aes(x = time, y = fold_change, col=gene)) +
+  geom_line() +
+  geom_point() +
+  theme_minimal() +
+  theme(legend.position = "none") +
+  labs(title="Most overall change over time",
+       subtitle=cases[1:5]) +
+  facet_wrap( ~ medium + temp, scale="free") 
+
+small <- exp %>%
+  filter(gene %in% cases[6:10], rep == "A", temp != "30C") %>%
+  select(-est_counts, -tpm, -rep) %>%
+  ggplot(aes(x = time, y = fold_change, col=gene)) +
+  geom_line() +
+  geom_point() + 
+  theme_minimal() +
+  theme(legend.position = "none",
+        axis.title.y=element_blank()) +
+  labs(title="Least overall change over time",
+       caption=paste("Most: ", paste(cases[1:5], collapse = ', '), "\n",
+                     "Least: ", paste(cases[6:10], collapse = ', '))) +
+  facet_wrap( ~ medium + temp, scale="free") 
+
+big + small
+```
+
 # Bivariate Analysis
 
 ```{r bivar}
+df <- df %>% as.data.table()
 numcols <- sapply(df, is.numeric)
 df.corr <- df[, ..numcols] %>% cor(use="pairwise.complete")
 
@@ -256,7 +383,7 @@ df.corr.big <- df.corr.big[-which(abs(rowSums(df.corr.big))==1),-which(abs(colSu
 
 square.cor <- corrplot(df.corr.big,
                        order="hclust",
-                       addrect=10,
+                       addrect=14,
                        method='square',
                        diag=FALSE,
                        tl.col="black",
@@ -266,4 +393,34 @@ square.cor <- corrplot(df.corr.big,
                        mar=c(0,0,1.5,0))
 ```
 
+# Question 1
 
+Find genes that have different expression across design conditions.
+
+```{r question-1}
+df
+```
+
+# Question 2
+
+Find motifs that are associated with genes that have different expression across design conditions (and are not associated with the ones that are not differentially expressed).
+
+Investigate whether a (relatively) small set of motifs can predict the observed patterns of gene expression.
+
+```{r question-2}
+experiment %>% select(est_counts, tpm, fold_change) %>% md.pattern()
+
+experiment %>%
+  select(est_counts, tpm, fold_change) %>%
+  mice(printFlag=FALSE, seed=1903, m=5, method="pmm") %>%
+  stripplot()
+
+imps <- experiment %>%
+  select(est_counts, tpm, fold_change) %>%
+  mice(printFlag=FALSE, seed=1903, m=10, method="pmm")
+fit <-  with(data=imps, exp=lm(fold_change ~ est_counts + tpm))
+pooled <- pool(fit)
+
+pooled_lm = fit$analyses[[1]]
+
+```

@@ -1,0 +1,240 @@
+---
+title: "Differential Expression in Genes"
+author: "Ted Ladas - s2124289"
+date: "20/07/2021"
+output: html_document
+---
+
+## Libraries
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse) # for tidy syntax
+library(janitor) # for handling column names
+library(data.table) # for fast processing of data
+library(broom) 
+library(tidytext)
+library(patchwork) 
+library(caret)
+library(mice)
+library("DESeq2")
+```
+
+## Load the data files
+
+```{r}
+keys <-
+  as.data.table(read_csv("./data/crypto_wake_up_sample_sheet.csv")) %>% clean_names()
+genes <-
+  as.data.table(
+    read_csv(
+      "./data/H99_all_genes_promoter_500nt_4mer_counts.csv",
+      skip = 10,
+      col_names = FALSE
+    ) %>%
+      row_to_names(row_number = 1)
+  ) %>% clean_names() %>% mutate_at(vars(-gene), as.numeric)
+experiment <-
+  as.data.table(read_csv(
+    "./data/CW_kallisto_abundance_fold_change_long_by_gene.csv"
+  )) %>% clean_names()
+```
+
+## Handle Missing Data
+
+```{r}
+handle.missing.data <- function(df) {
+  df <- df %>%
+    mutate(fold_change = case_when(est_counts + tpm == 0 ~ 0,
+                                   TRUE ~ fold_change)) %>%
+    mutate(fold_change = na_if(fold_change, Inf)) # Convert Infities to NA to impute them with mice
+  
+  # --------------------- Imputing Missing Values -----------------------------
+  # https://stackoverflow.com/questions/52713733/how-to-use-predict-function-with-my-pooled-results-from-mice
+  df %>% select(est_counts, tpm, fold_change) %>% md.pattern()
+  
+  stripplot <- df %>%
+    select(est_counts, tpm, fold_change) %>%
+    mice(
+      printFlag = FALSE,
+      seed = 1903,
+      m = 5,
+      method = "pmm"
+    ) %>%
+    stripplot()
+  
+  imps <- df %>%
+    select(est_counts, tpm, fold_change) %>%
+    mice(
+      printFlag = FALSE,
+      seed = 1903,
+      m = 5,
+      method = "pmm"
+    ) # imputing missing values
+  fit <-
+    imps %>% with(exp = lm(fold_change ~ est_counts + tpm)) # setting the expression
+  pooled <- fit %>% pool() # pooling the models.
+  print(pool.r.squared(fit, adjusted = TRUE)) # printing the adjusted R-square as a measure to choose the best model for imputing missing data
+  
+  
+  pooled_lm = fit$analyses[[1]]
+  pooled_lm$coefficients = summary(pooled)$estimate # pooling the predicted coefficients of the models.
+  prediction <-
+    predict(pooled_lm, newdata = experiment) %>% as.data.frame() # predicting with those coefficients
+  
+  df <- cbind(df, prediction) %>%
+    dplyr::rename(prediction = ".") %>%
+    mutate(fold_change = case_when(is.na(fold_change) ~ prediction,
+                                   TRUE ~ fold_change)) %>%
+    select(-prediction)
+  return(list(df, stripplot))
+}
+```
+
+```{r}
+missing.data.results <- experiment %>% handle.missing.data()
+stripplot <- missing.data.results[2][[1]]
+stripplot
+experiment <- missing.data.results[1][[1]]
+```
+
+```{r}
+keys %>% head()
+genes %>% head() 
+experiment %>% head() 
+```
+
+## Joining Datasets for Differential Expression Analysis
+
+```{r}
+# https://www.youtube.com/watch?v=OxgiyS9Wvww
+meta <- keys %>% select(-sample_id) 
+data <- experiment %>%
+  select(-tpm, -fold_change) %>% 
+  mutate(est_counts = round(est_counts)) %>%
+  pivot_wider(names_from = code, values_from = est_counts) %>%
+  column_to_rownames("gene")
+data
+```
+
+## Using DESeq2 to get p-values
+
+```{r}
+# create dds
+dds <- DESeqDataSetFromMatrix(
+  countData = data,
+  colData = meta,
+  design = ~ medium + temp + time
+) %>% DESeq(.)
+
+# create rld
+rld <- rlog(dds, blind = T)
+rld_counts <- assay(rld) %>% as.data.frame()
+# rld_counts %>% head()
+
+get_results <- function(contrast, dds) {
+  # helper function to calculate p-values
+  res_unshrunken <- results(dds,
+                            contrast = contrast)
+  results = lfcShrink(dds,
+                      contrast = contrast,
+                      res = res_unshrunken_medium) %>%
+    as.data.frame()
+  return(results)
+}
+
+results_medium <-
+  get_results(contrast = c("medium", "RPMI+", "YPD"), dds = dds)
+results_temp <-
+  get_results(contrast = c("temp", "25C", "37C"), dds = dds)
+```
+
+```{r}
+# find genes that have significant changes accross condition checks
+threshold = 0.05
+
+medium_sign <- results_medium %>%
+  select(log2FoldChange, pvalue, padj) %>%
+  filter(padj <= threshold)
+
+temp_sign <- results_temp %>%
+  select(log2FoldChange, pvalue, padj) %>%
+  filter(padj <= threshold)
+
+join_list_genes <-
+  merge(medium_sign, temp_sign, by = 0) %>% select(Row.names)
+join_list_genes
+```
+
+## PCA from DESeq2
+
+```{r}
+# Plotting the data in 2 dimensions with coloring per condition
+medium <- plotPCA(rld, intgroup=c("medium")) + 
+  geom_point() + 
+  ggtitle("Medium PCA") +
+  theme_minimal()
+
+temp <- plotPCA(rld, intgroup=c("temp")) + 
+  geom_point() + 
+  ggtitle("Temperature PCA") +
+  theme_minimal()
+
+time <- plotPCA(rld, intgroup=c("time")) + 
+  geom_point() + 
+  ggtitle("Time PCA") +
+  theme_minimal()
+
+medium
+temp
+time
+```
+
+## Volcano Plot
+
+```{r}
+
+create_volcano <- function(results, thres, u = T) {
+  res_table <- results %>%
+    mutate(threshold_upper_bound = padj < thres &
+             abs(log2FoldChange) >= 1) %>%
+    na.omit()
+  
+  volcano <- res_table %>% ggplot() +
+    geom_point(aes(
+      x = log2FoldChange,
+      y = isTRUE(u) * (-log10(padj)) + isFALSE(u) * (padj),
+      col = threshold_upper_bound
+    )) +
+    scale_color_manual(values = c("black", "red4")) +
+    labs(title = "Volcano plot of p-values adjusted",
+         col = paste("p-adj >", thres),
+         y = "p-adj") +
+    theme_minimal() + 
+    theme(legend.position = "none")
+  return(volcano)
+}
+
+volcano_medium <- create_volcano(results=results_medium, thres=threshold, u=F)
+volcano_temp <- create_volcano(results=results_temp, thres=threshold, u=T)
+volcano_medium
+volcano_temp
+```
+
+## Heatmap
+
+```{r}
+genes_sign <- as.character(sub(",", "", unlist(join_list_genes, use.names = FALSE)))
+rld_counts_sig <- rld_counts %>%
+  filter(row.names(.) %in% genes_sign) %>%
+  as.matrix()
+
+heatmap <- heatmap(
+    rld_counts_sig,
+    Rowv = NA,
+    Colv = NA,
+    col = cm.colors(256),
+    scale = "column",
+    main = "Heatmap of rld Counts"
+  )
+```
