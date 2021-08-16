@@ -1,0 +1,55 @@
+---
+title: "Find motifs"
+author: "Ted Ladas - s2124289"
+date: "30/07/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+rm(list = ls(all.names = TRUE))
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse) # for tidy syntax
+library(tidymodels)
+library(rsample)
+library(data.table) # for fast processing of data
+library(broom) 
+library(tidytext)
+library(patchwork) 
+library(caret)
+library(sqldf)
+source("fit_lasso.R")
+```
+
+```{r}
+df.other <- read.csv.sql("./data/diff_other.csv", sql = "select * from file order by random() limit 20000") %>% as.data.table()
+
+set.seed(1903)
+split.other <- initial_split(df.other, prop=.8)
+train.other <- training(split.other)
+test.other <- testing(split.other)
+```
+
+```{r}
+lasso <- fit_lasso(train.set = train.other, split = split.other)
+
+metrics <- lasso$metrics
+lowest_rmse <- lasso$lowest_rmse
+last_fit <- lasso$last_fit
+lambda_plot <- lasso$lambda_plot
+importance_plot <- lasso$importance_plot
+lowest_results <- lasso$lowest_results
+
+lambda_plot
+importance_plot
+
+metrics
+lowest_results %>%
+  pull_workflow_fit() %>%
+  tidy() %>%
+  filter(term != "(Intercept)") %>%
+  select(-penalty) %>%
+  mutate(estimate = round(estimate, digits=4)) %>%
+  arrange(-abs(estimate)) %>%
+  slice(1:20)
+```
+

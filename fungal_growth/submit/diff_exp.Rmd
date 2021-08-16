@@ -1,0 +1,451 @@
+---
+title: "Differential Expression in Genes"
+author: "Ted Ladas - s2124289"
+date: "20/07/2021"
+output: html_document
+---
+
+# Libraries
+
+```{r setup, include=TRUE}
+rm(list = ls(all.names = TRUE))
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse) # for tidy syntax
+library(janitor) # for handling column names
+library(data.table) # for fast processing of data
+library(broom) 
+library(tidytext)
+library(patchwork) 
+library(caret)
+library(mice)
+library(skimr)
+library("DESeq2")
+```
+
+# Data Files
+
+```{r}
+keys <-
+  as.data.table(read_csv("./data/crypto_wake_up_sample_sheet.csv")) %>% clean_names()
+genes <-
+  as.data.table(
+    read_csv(
+      "./data/H99_all_genes_promoter_500nt_4mer_counts.csv",
+      skip = 10,
+      col_names = FALSE
+    ) %>%
+      row_to_names(row_number = 1)
+  ) %>% clean_names() %>% mutate_at(vars(-gene), as.numeric)
+experiment <-
+  as.data.table(read_csv(
+    "./data/CW_kallisto_abundance_fold_change_long_by_gene.csv"
+  )) %>% clean_names()
+```
+
+## Missing Data Handling
+
+```{r}
+handle.missing.data <- function(df) {
+  df <- df %>%
+    mutate(fold_change = case_when(est_counts + tpm == 0 ~ 0,
+                                   TRUE ~ fold_change)) %>%
+    mutate(fold_change = na_if(fold_change, Inf)) # Convert Infities to NA to impute them with mice
+  
+  # --------------------- Imputing Missing Values -----------------------------
+  # https://stackoverflow.com/questions/52713733/how-to-use-predict-function-with-my-pooled-results-from-mice
+  df %>% dplyr::select(est_counts, tpm, fold_change) %>% md.pattern()
+  
+  stripplot <- df %>%
+    dplyr::select(est_counts, tpm, fold_change) %>%
+    mice(
+      printFlag = FALSE,
+      seed = 1903,
+      m = 5,
+      method = "pmm"
+    ) %>%
+    stripplot()
+  
+  imps <- df %>%
+    dplyr::select(est_counts, tpm, fold_change) %>%
+    mice(
+      printFlag = FALSE,
+      seed = 1903,
+      m = 5,
+      method = "pmm"
+    ) # imputing missing values
+  fit <-
+    imps %>% with(exp = lm(fold_change ~ est_counts + tpm)) # setting the expression
+  pooled <- fit %>% pool() # pooling the models.
+  print(pool.r.squared(fit, adjusted = TRUE)) # printing the adjusted R-square as a measure to choose the best model for imputing missing data
+  
+  
+  pooled_lm = fit$analyses[[1]]
+  pooled_lm$coefficients = summary(pooled)$estimate # pooling the predicted coefficients of the models.
+  prediction <-
+    predict(pooled_lm, newdata = experiment) %>% as.data.frame() # predicting with those coefficients
+  
+  df <- cbind(df, prediction) %>%
+    dplyr::rename(prediction = ".") %>%
+    mutate(fold_change = case_when(is.na(fold_change) ~ prediction,
+                                   TRUE ~ fold_change)) %>%
+    dplyr::select(-prediction)
+  return(list(df, stripplot))
+}
+```
+
+```{r}
+missing.data.results <- experiment %>% handle.missing.data()
+stripplot <- missing.data.results[2][[1]]
+stripplot
+experiment <- missing.data.results[1][[1]]
+```
+
+```{r}
+keys %>% head()
+genes %>% head()
+experiment %>% head()
+```
+
+## Joining Datasets for General Analysis
+
+```{r}
+exp <- experiment %>% 
+  left_join(keys, by = "code") %>%
+  dplyr::select(gene, medium, temp, time, rep, est_counts, tpm, fold_change)
+skim(exp)
+
+df <- exp %>%
+  left_join(genes, by = "gene") %>%
+  mutate(row_name = paste(gene, medium, temp, time, rep, sep="-"), .before=gene) %>%
+  remove_rownames %>%
+  column_to_rownames("row_name") %>% as.data.frame()
+df %>% head()
+```
+
+```{r}
+dmy <- dummyVars("~ medium + temp + time + rep ", data = df)
+df.model <- data.frame(predict(dmy, newdata = df))
+df.model <- cbind(df.model, df) %>%
+  dplyr::select(-medium, -temp, -time, -rep, -gene) %>% 
+  clean_names() %>% 
+  relocate(c(est_counts, tpm, fold_change), .before=medium_rpmi)
+
+df.model %>% head()
+```
+
+## Fixing the Systemic Bias
+
+```{r}
+y1 <- df.model %>%
+  dplyr::select(est_counts, rep_a) %>% 
+  filter(rep_a == 1) %>%
+  mutate(log_est_counts = log(est_counts + 1, 2)) %>%
+  dplyr::select(log_est_counts) %>%
+  as.matrix()
+y2 <- df.model %>%
+  dplyr::select(est_counts, rep_b) %>%
+  filter(rep_b == 1) %>%
+  mutate(log_est_counts = log(est_counts + 1, 2)) %>%
+  dplyr::select(log_est_counts) %>% as.matrix()
+
+ss = smooth.spline(y2, y1 - y2, lambda = 0.01)
+plot(y2, y1 - y2)
+lines(ss, col = 2)
+abline(h = 0, col = 4, lwd = 2)
+
+bias = rep(NA, length(y2))
+for (i in 1:length(y2)) {
+  bias[i] <- as.numeric(predict(ss, x = y2[i])$y)
+}
+
+y1.new = round(y1 - bias)
+y2.new = round(y2)
+
+# sum(y1.new == y1)/length(y1)
+
+# Rebuilding the dataset according to the smooth splines output. 
+df.model <- df.model %>%
+  mutate(log_est_counts_a = rep(y1.new,2), 
+         log_est_counts_b = rep(y2.new,2)) %>%
+  mutate(log_est_counts_a = log_est_counts_a * rep_a, 
+         log_est_counts_b = log_est_counts_b * rep_b, 
+         log_est_counts = log_est_counts_a + log_est_counts_b,
+         est_counts = round(2**log_est_counts - 1)) %>% 
+  dplyr::select(-log_est_counts_a, -log_est_counts_b, -log_est_counts)
+
+# df.model %>% head()
+df.model.copy <- df.model %>% dplyr::select(-tpm, -fold_change)
+df.model.copy %>% head()
+
+# Transfering the changes to the experiment data
+experiment <- experiment %>% mutate(est_counts = df.model.copy$est_counts)
+
+write_csv(df.model , "./data/model.csv")
+write_csv(experiment, "./data/experiment.csv")
+```
+
+## Creating Datasets for Differential Expression Analysis
+
+```{r}
+# https://www.youtube.com/watch?v=OxgiyS9Wvww
+meta <- keys %>% dplyr::select(-sample_id) 
+data <- experiment %>%
+  dplyr::select(-tpm, -fold_change) %>% 
+  mutate(est_counts = round(est_counts)) %>%
+  pivot_wider(names_from = code, values_from = est_counts) %>%
+  column_to_rownames("gene")
+data
+```
+
+## Barplot of Data
+
+```{r}
+data %>% 
+  colSums() %>%
+  as.data.frame() %>% 
+  dplyr::rename(total=".") %>% 
+  mutate(total = total/1e6) %>%
+  ggplot(aes(x=row.names(.), y=total)) + 
+  geom_bar(stat = 'identity') + 
+  theme_minimal() + 
+  theme(axis.text.x = element_text(angle = 90)) + 
+  xlab("Condition ID") + 
+  ylab("Total Estimated Counts in Millions")
+```
+
+## Bias check of Data
+
+```{r}
+# this can be tidied a bit with a function 
+rc01 <- log2(data+1) %>% ggplot(aes(x=RC01A, y=RC01B)) + 
+  geom_jitter(size=0.5) + 
+  geom_abline(intercept = 0, slope = 1, col="blue")
+
+rc12 <- log2(data+1) %>% ggplot(aes(x=RC12A, y=RC12B)) + 
+  geom_jitter(size=0.5) + 
+  geom_abline(intercept = 0, slope = 1, col="blue")
+
+rh01 <- log2(data+1) %>% ggplot(aes(x=RH01A, y=RH01B)) + 
+  geom_jitter(size=0.5) + 
+  geom_abline(intercept = 0, slope = 1, col="blue")
+
+rh12 <- log2(data+1) %>% ggplot(aes(x=RH12A, y=RH12B)) + 
+  geom_point(size=0.5) + 
+  geom_abline(intercept = 0, slope = 1, col="blue")
+
+yc01 <- log2(data+1) %>% ggplot(aes(x=YC01A, y=YC01B)) + 
+  geom_jitter(size=0.5) + 
+  geom_abline(intercept = 0, slope = 1, col="blue")
+
+yc12 <- log2(data+1) %>% ggplot(aes(x=YC12A, y=YC12B)) + 
+  geom_jitter(size=0.5) + 
+  geom_abline(intercept = 0, slope = 1, col="blue")
+
+yh01 <- log2(data+1) %>% ggplot(aes(x=YH01A, y=YH01B)) + 
+  geom_jitter(size=0.5) + 
+  geom_abline(intercept = 0, slope = 1, col="blue")
+
+yh12 <- log2(data+1) %>% ggplot(aes(x=YH12A, y=YH12B)) + 
+  geom_point(size=0.5) + 
+  geom_abline(intercept = 0, slope = 1, col="blue")
+
+(rc01 | rc12 | rh01 | rh12) / (yc01 | yc12 | yh01 | yh12) + 
+  plot_annotation("Same conditions between Replicates")
+```
+
+```{r}
+# this can be tidied a bit with a function 
+r01a <- log2(data+1) %>% ggplot(aes(x=RC01A, y=RH01A)) + 
+  geom_jitter(size=0.5) + 
+  geom_abline(intercept = 0, slope = 1, col="blue")
+
+r01b <- log2(data+1) %>% ggplot(aes(x=RC01B, y=RH01B)) + 
+  geom_jitter(size=0.5) + 
+  geom_abline(intercept = 0, slope = 1, col="blue")
+
+r12a <- log2(data+1) %>% ggplot(aes(x=RC12A, y=RH12A)) + 
+  geom_jitter(size=0.5) + 
+  geom_abline(intercept = 0, slope = 1, col="blue")
+
+r12b <- log2(data+1) %>% ggplot(aes(x=RC12B, y=RH12B)) + 
+  geom_point(size=0.5) + 
+  geom_abline(intercept = 0, slope = 1, col="blue")
+
+y01a <- log2(data+1) %>% ggplot(aes(x=YC01A, y=YH01A)) + 
+  geom_jitter(size=0.5) + 
+  geom_abline(intercept = 0, slope = 1, col="blue")
+
+y01b <- log2(data+1) %>% ggplot(aes(x=YC01B, y=YH01B)) + 
+  geom_jitter(size=0.5) + 
+  geom_abline(intercept = 0, slope = 1, col="blue")
+
+y12a <- log2(data+1) %>% ggplot(aes(x=YC12A, y=YH12A)) + 
+  geom_jitter(size=0.5) + 
+  geom_abline(intercept = 0, slope = 1, col="blue")
+
+y12b <- log2(data+1) %>% ggplot(aes(x=YC12B, y=YH12B)) + 
+  geom_point(size=0.5) + 
+  geom_abline(intercept = 0, slope = 1, col="blue")
+
+(r01a | r01b | r12a | r12b) / (y01a | y01b | y12a | y12b) + 
+  plot_annotation("Same replicates between Mediums")
+```
+
+## Using DESeq2 to get p-values
+
+```{r}
+# create dESeq data set
+dds <- DESeqDataSetFromMatrix(
+  countData = data,
+  colData = meta,
+  design = ~ medium + temp + time
+) %>% DESeq(.)
+
+# create rlog dds object
+rld <- rlog(dds, blind = T)
+rld_counts <- assay(rld) %>% as.data.frame()
+# rld_counts %>% head()
+
+get_results <- function(contrast, dds) {
+  # helper function to calculate p-values
+  res_unshrunken <- results(dds,
+                            contrast = contrast)
+  results = lfcShrink(dds,
+                      contrast = contrast,
+                      res = res_unshrunken) 
+  return(results)
+}
+
+results_medium <-
+  get_results(contrast = c("medium", "RPMI+", "YPD"), dds = dds)
+results_temp <-
+  get_results(contrast = c("temp", "25C", "37C"), dds = dds)
+```
+
+```{r}
+# find genes that have significant changes accross condition checks
+threshold = 0.05
+
+medium_sign <- results_medium %>% 
+  as.data.frame() %>%
+  dplyr::select(log2FoldChange, pvalue, padj) %>%
+  filter(padj <= threshold)
+
+temp_sign <- results_temp %>% 
+  as.data.frame() %>%
+  dplyr::select(log2FoldChange, pvalue, padj) %>%
+  filter(padj <= threshold)
+
+join_list_genes <-
+  merge(medium_sign, temp_sign, by = 0) 
+join_list_genes 
+```
+
+## PCA from DESeq2
+
+```{r}
+# Plotting the data in 2 dimensions with coloring per condition
+medium <- plotPCA(rld, intgroup=c("medium")) + 
+  geom_point() + 
+  ggtitle("Medium PCA") +
+  theme_minimal()
+
+temp <- plotPCA(rld, intgroup=c("temp")) + 
+  geom_point() + 
+  ggtitle("Temperature PCA") +
+  theme_minimal()
+
+time <- plotPCA(rld, intgroup=c("time")) + 
+  geom_point() + 
+  ggtitle("Time PCA") +
+  theme_minimal()
+
+medium_temp <- plotPCA(rld, intgroup=c("medium", "temp")) + 
+  geom_point() + 
+  ggtitle("Medium and temp PCA") +
+  theme_minimal()
+
+medium
+temp 
+time
+medium_temp
+```
+
+## Heatmap
+
+```{r}
+genes_sign <-
+  as.character(sub(",", "", unlist(
+    join_list_genes %>% dplyr::select(Row.names), use.names = FALSE
+  )))
+rld_counts_sig <- rld_counts %>%
+  filter(row.names(.) %in% genes_sign) %>%
+  as.matrix()
+
+heatmap <- heatmap(rld_counts_sig,
+                   # Rowv = NA,
+                   # Colv = NA,
+                   col = cm.colors(256),
+                   scale = "column") 
+```
+
+## MA plots
+
+```{r}
+plotMA(results_medium, ylim=c(-2,2))
+plotMA(results_temp, ylim=c(-2,2))
+```
+
+## Volcano Plot
+
+```{r}
+create_volcano <- function(results, thres, u = T) {
+  res_table <- results %>%
+    mutate(threshold_upper_bound = padj < thres &
+             abs(log2FoldChange) >= 1) %>%
+    na.omit()
+  
+  volcano <- res_table %>% ggplot() +
+    geom_point(aes(
+      x = log2FoldChange,
+      y = isTRUE(u) * (-log10(padj)) + isFALSE(u) * (padj),
+      col = threshold_upper_bound
+    )) +
+    scale_color_manual(values = c("black", "red4")) +
+    labs(title = "Volcano plot of p-values adjusted",
+         col = paste("p-adj >", thres),
+         y = "p-adj") +
+    theme_minimal() +
+    theme(legend.position = "none")
+  return(volcano)
+}
+
+volcano_medium <-
+  create_volcano(results = results_medium %>% as.data.frame(),
+                 thres = threshold,
+                 u = F)
+volcano_temp <-
+  create_volcano(results = results_temp %>% as.data.frame(),
+                 thres = threshold,
+                 u = T)
+volcano_medium
+volcano_temp
+```
+
+## Top Gene
+
+```{r}
+top_gene <- results_medium %>%
+  as.data.frame() %>%
+  filter(padj <= threshold) %>%
+  arrange(-abs(log2FoldChange)) %>%
+  slice_max(log2FoldChange, n=1) %>%
+  rownames(.)
+
+plotCounts(dds, gene = top_gene, intgroup = c("medium", "temp"))
+```
+
+```{r}
+
+```
+

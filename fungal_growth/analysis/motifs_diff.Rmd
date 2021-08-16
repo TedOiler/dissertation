@@ -1,0 +1,102 @@
+---
+title: "Motifs of differentially expressed genes"
+author: "Ted Ladas - s2124289"
+date: "28/07/2021"
+output: html_document
+---
+
+# Libraries
+
+```{r setup, include=TRUE}
+rm(list = ls(all.names = TRUE))
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse) # for tidy syntax
+library(tidymodels)
+library(rsample)
+library(data.table) # for fast processing of data
+library(broom)
+library(tidytext)
+library(patchwork)
+library(caret)
+source("fit_lasso.R")
+```
+
+# Load data
+
+```{r}
+experiment <- as.data.table(read_csv("./data/experiment.csv")) %>% 
+  dplyr::select(-tpm, -fold_change) %>% 
+  filter_all(all_vars(!is.infinite(.)))
+  
+df.full <- as.data.table(read_csv("./data/model.csv")) %>%
+  mutate(gene = experiment$gene, .before=est_counts) %>% 
+  dplyr::select(-tpm, -fold_change)
+
+df.full %>% write_csv("./data/model2.csv")
+
+diff_exp_genes <- as.data.table(read_csv("./data/diff_exp_genes.csv"))
+
+df.full %>% head()
+experiment %>% head()
+diff_exp_genes %>% head()
+```
+# Model 
+
+## Data splits
+
+```{r}
+df.diff <- df.full %>% right_join(diff_exp_genes, by="gene") %>% 
+  mutate(log_est_counts = log(est_counts+1, base=10), .after=est_counts) %>% 
+  select(-est_counts, -gene) 
+
+df.diff %>% write_csv("./data/data_diff.csv")
+ 
+df.full %>% anti_join(diff_exp_genes, by="gene") %>% 
+  mutate(log_est_counts = log(est_counts+1, base=10), .after=est_counts) %>% 
+  select(-est_counts, -gene) %>% write_csv("./data/diff_other.csv")
+
+set.seed(1903)
+split.diff <- initial_split(df.diff, prop=.8)
+train.diff <- training(split.diff)
+test.diff <- testing(split.diff)
+```
+
+
+```{r}
+df.k <- df.diff %>% filter(temp30c==0,
+                      medium_rpmi==1, 
+                      rep_a==1) %>%
+  select(-medium_rpmi, medium_ypd, temp30c, rep_a, rep_b)
+
+set.seed(1903)
+split.k <- initial_split(df.k, prop=.8)
+train.k <- training(split.k)
+test.k <- testing(split.k)
+```
+
+
+## Lasso Regression
+
+```{r}
+lasso <- fit_lasso(train.set = train.diff, split = split.diff)
+
+metrics <- lasso$metrics
+lowest_rmse <- lasso$lowest_rmse
+last_fit <- lasso$last_fit
+lambda_plot <- lasso$lambda_plot
+importance_plot <- lasso$importance_plot
+lowest_results <- lasso$lowest_results
+
+lambda_plot
+importance_plot
+metrics
+
+lowest_results %>%
+  pull_workflow_fit() %>%
+  tidy() %>%
+  filter(term != "(Intercept)") %>%
+  select(-penalty) %>%
+  mutate(estimate = round(estimate, digits=4)) %>%
+  arrange(-abs(estimate)) %>%
+  slice(1:20)
+```

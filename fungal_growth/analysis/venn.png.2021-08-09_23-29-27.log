@@ -1,0 +1,27 @@
+INFO [2021-08-09 23:29:27] $x
+INFO [2021-08-09 23:29:27] list(full_features, diff_features, other_features)
+INFO [2021-08-09 23:29:27] 
+INFO [2021-08-09 23:29:27] $category.names
+INFO [2021-08-09 23:29:27] c("All genes", "Differentially \n Expresed", "All Other")
+INFO [2021-08-09 23:29:27] 
+INFO [2021-08-09 23:29:27] $filename
+INFO [2021-08-09 23:29:27] [1] "venn.png"
+INFO [2021-08-09 23:29:27] 
+INFO [2021-08-09 23:29:27] $output
+INFO [2021-08-09 23:29:27] [1] TRUE
+INFO [2021-08-09 23:29:27] 
+INFO [2021-08-09 23:29:27] $imagetype
+INFO [2021-08-09 23:29:27] [1] "png"
+INFO [2021-08-09 23:29:27] 
+INFO [2021-08-09 23:29:27] $scaled
+INFO [2021-08-09 23:29:27] [1] FALSE
+INFO [2021-08-09 23:29:27] 
+INFO [2021-08-09 23:29:27] $col
+INFO [2021-08-09 23:29:27] [1] "black"
+INFO [2021-08-09 23:29:27] 
+INFO [2021-08-09 23:29:27] $fill
+INFO [2021-08-09 23:29:27] colors
+INFO [2021-08-09 23:29:27] 
+INFO [2021-08-09 23:29:27] $cat.col
+INFO [2021-08-09 23:29:27] [1] "black"
+INFO [2021-08-09 23:29:27] 

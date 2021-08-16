@@ -1,0 +1,274 @@
+---
+title: "Feature Selection Linear Regression"
+author: "Ted Ladas - s2124289"
+date: "31/07/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+rm(list = ls(all.names = TRUE))
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse) # for tidy syntax
+library(tidymodels)
+library(rsample)
+library(data.table) # for fast processing of data
+library(broom) 
+library(tidytext)
+library(patchwork) 
+library(caret)
+library(sqldf)
+library(MASS)
+```
+
+```{r}
+df.full <- read.csv.sql("./data/model2.csv", sql = "select * from file order by random() limit 1000") %>% 
+  mutate(log_est_counts = log(est_counts + 1, base=10), .before=est_counts) %>% 
+  dplyr::select(-est_counts, -gene) %>% 
+  as.data.table()
+
+df.diff <- read.csv.sql("./data/data_diff.csv", sql = "select * from file order by random() limit 1000") %>% 
+  as.data.table()
+
+df.other <- read.csv.sql("./data/diff_other.csv", sql = "select * from file order by random() limit 1000") %>% 
+  as.data.table()
+```
+
+```{r}
+## Full model
+
+fit_full_model <- function(dat=train.diff){
+  
+  full.model <- glm(log_est_counts ~ .,
+                    data = dat,
+                    family = gaussian)
+  result <- full.model %>%
+    tidy() %>%
+    na.omit() %>%
+    filter(p.value <= 0.05) %>%
+    arrange(-abs(estimate)) %>%
+    slice(1:20) %>%
+    dplyr::select(term, estimate) %>%
+    rename(feature = term,
+           value = estimate) %>%
+    mutate(model = "full linear")
+  
+  return(result)
+}
+```
+
+```{r}
+## boruta model
+
+fit_boruta <- function(dat=train.diff) {
+  library(Boruta)
+  
+  boruta <- Boruta(
+    log_est_counts ~ .,
+    data = dat,
+    maxRuns = 500,
+    doTrace = 2
+  )
+  
+  bor <- TentativeRoughFix(boruta)
+  boruta_plot <- plot(bor, las = 2)
+  
+  features <- attStats(bor) %>%
+    filter(decision != "Rejected") %>%
+    arrange(-medianImp) %>%
+    dplyr::select(meanImp) %>%
+    add_rownames(var = "feature") %>%
+    mutate(model = "boruta")  %>% 
+    rename(value=meanImp)
+  
+  result <- list(features, boruta_plot)
+  return(result)
+}
+```
+
+```{r}
+## univ_glm_model
+
+# Helper
+univ.glm <- function(x, y, ordering = TRUE) {
+  output <- NULL
+  for (i in 1:ncol(x)) {
+    regr <- glm(y ~ x[[i]], family = gaussian)
+    data <- transpose(as.data.table(coef(summary(regr))[-1, -3]))
+    data <- cbind(data, colnames(x[1,])[i])
+    output <- rbind(output, data)
+  }
+  colnames(output) <-
+    c("beta", "std.error", "p.value", "variable")
+  return(output[order(output$"p.value" * ordering)])
+}
+
+fit_univ_glm <- function(dat) {
+  
+  X <- dat %>%
+    dplyr::select(-log_est_counts)  %>%
+    as.data.table()
+  
+  y <- dat %>%
+    dplyr::select(log_est_counts)  %>% 
+    as.matrix()
+  
+  association <- data.table(univ.glm(x = X, y = y))
+  
+  result <- association %>%
+    filter(p.value <= 0.05) %>%
+    arrange(-abs(beta)) %>%
+    dplyr::select(-std.error, -p.value) %>%
+    rename(feature = variable, value = beta) %>%
+    relocate(feature, .before = value) %>%
+    mutate(model = "association study")
+  
+  return(result)
+}
+```
+
+```{r}
+## lasso model
+
+fit_lasso <- function(dat) {
+  
+  library(glmnet)
+  
+  X <- dat %>%
+    dplyr::select(-log_est_counts)  %>%
+    as.data.table()
+  
+  y <- dat %>%
+    dplyr::select(log_est_counts)  %>% 
+    as.matrix()
+  
+  fit.cv.lasso <-
+    cv.glmnet(as.matrix(X),
+              as.matrix(y),
+              family = 'gaussian',
+              type.measure = c('mse'))
+  
+  lasso_plot <- plot(fit.cv.lasso)
+  
+  lasso.min.pos    <-
+    which(fit.cv.lasso$lambda == fit.cv.lasso$lambda.min)
+  lasso.1se.pos    <-
+    which(fit.cv.lasso$lambda == fit.cv.lasso$lambda.1se)
+  lasso.model      <- 'lasso'
+  lasso.lambda.min <- round(fit.cv.lasso$lambda.min, 3)
+  lasso.lambda.1se <- round(fit.cv.lasso$lambda.1se, 3)
+  lasso.model.min  <- round(fit.cv.lasso$nzero[lasso.min.pos], 3)
+  lasso.model.1se  <- round(fit.cv.lasso$nzero[lasso.1se.pos], 3)
+  lasso.auc.min    <- round(fit.cv.lasso$cvm[lasso.min.pos], 3)
+  lasso.auc.1se    <- round(fit.cv.lasso$cvm[lasso.1se.pos], 3)
+  
+  results  <- c(
+    lasso.model,
+    lasso.lambda.min,
+    lasso.model.min,
+    lasso.auc.min,
+    lasso.lambda.1se,
+    lasso.model.1se,
+    lasso.auc.1se
+  ) %>%
+    as.data.table() %>%
+    transpose()
+  
+  cols <- c(
+    'model',
+    'lambda.min',
+    'variables.min',
+    'mse.min',
+    'lambda.1se',
+    'variables.1se',
+    'mse.1se'
+  )
+  setnames(results, cols)
+  
+  fit <-
+    glmnet(
+      as.matrix(X),
+      as.matrix(y),
+      family = 'gaussian',
+      type.measure = c('mse'),
+      lambda = fit.cv.lasso$lambda.min
+    )
+  
+  
+  features <- coef(fit.cv.lasso, s = "lambda.min") %>%
+    tidy() %>%
+    arrange(-abs(value)) %>%
+    dplyr::select(-column) %>%
+    mutate(model = "lasso") %>%
+    rename(feature = row)
+  
+  result <- list(features, lasso_plot)
+  
+  return(result)
+}
+```
+
+
+
+
+```{r}
+feature_voting <- function(dat) {
+  
+  full_model <- fit_full_model(dat = dat)
+  boruta_model <- fit_boruta(dat = dat)
+  univ_glm_model <- fit_univ_glm(dat = dat)
+  lasso_model <- fit_lasso(dat = dat)
+  
+  result <- bind_rows(full_model,
+                      boruta_model[[1]],
+                      univ_glm_model,
+                      lasso_model[[1]]) %>%
+    filter(feature != "(Intercept)") %>%
+    dplyr::select(-value) %>%
+    count(feature) %>%
+    arrange(-n)
+
+  return(result)
+}
+```
+
+```{r}
+full <- feature_voting(dat=df.full)
+diff <- feature_voting(dat=df.diff)
+other <- feature_voting(dat=df.other)
+
+full %>% write_csv("./data/final_features_full.csv")
+diff %>% write_csv("./data/final_features_diff.csv")
+other %>% write_csv("./data/final_features_other.csv")
+
+full <- full %>% mutate(data="full")
+diff <- diff %>% mutate(data="diff")
+other <- other %>% mutate(data="other")
+
+rbind(full, diff, other) %>%
+  filter(n>1) %>%
+  dplyr::select(-n)
+
+full_features <- full %>% dplyr::select(feature) %>% unlist() %>% as.vector()
+diff_features <- diff %>% dplyr::select(feature) %>% unlist() %>% as.vector()
+other_features <- other %>% dplyr::select(feature) %>% unlist() %>% as.vector()
+```
+
+
+```{r}
+library(VennDiagram)
+
+colors <- c("#FF937C", "#7CFF93", "#937CFF")
+venn.diagram(x=list(full_features, diff_features, other_features), 
+             category.names=c('All genes', 'Differentially \n Expresed', 'All Other'), 
+             filename='venn.png',
+             output=TRUE,
+             imagetype='png',
+             scaled=FALSE, 
+             col='black',
+             fill=colors,
+             cat.col="black") 
+```
+
+```{r}
+
+```
