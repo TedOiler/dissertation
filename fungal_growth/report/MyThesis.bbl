@@ -1,0 +1,36 @@
+\begin{thebibliography}{1}
+
+\bibitem{eaton1983gauss}
+Morris~L Eaton.
+\newblock The gauss-markov theorem in multivariate analysis.
+\newblock Technical report, University of Minnesota, 1983.
+
+\bibitem{kursa2010feature}
+Miron~B Kursa, Witold~R Rudnicki, et~al.
+\newblock Feature selection with the boruta package.
+\newblock {\em J Stat Softw}, 36(11):1--13, 2010.
+
+\bibitem{love2014moderated}
+Michael~I Love, Wolfgang Huber, and Simon Anders.
+\newblock Moderated estimation of fold change and dispersion for rna-seq data
+  with deseq2.
+\newblock {\em Genome biology}, 15(12):1--21, 2014.
+
+\bibitem{may2016cryptococcus}
+Robin~C May, Neil~RH Stone, Darin~L Wiesner, Tihana Bicanic, and Kirsten
+  Nielsen.
+\newblock Cryptococcus: from environmental saprophyte to global pathogen.
+\newblock {\em Nature Reviews Microbiology}, 14(2):106--117, 2016.
+
+\bibitem{ridgeway2007all}
+Greg Ridgeway.
+\newblock All of nonparametric statistics, larry wasserman.
+\newblock {\em Journal of the American Statistical Association}, 102:389--389,
+  2007.
+
+\bibitem{varian2014big}
+Hal~R Varian.
+\newblock Big data: New tricks for econometrics.
+\newblock {\em Journal of Economic Perspectives}, 28(2):3--28, 2014.
+
+\end{thebibliography}
